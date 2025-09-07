@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}房间列表{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="logo">
+            <h4><i class="fas fa-home me-2"></i>个人信息</h4>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 id="username-display">你好, {{ username }}!</h4>
+                <p class="text-muted mb-0">用户ID: {{ user_id }}</p>
+            </div>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#usernameModal">
+                <i class="fas fa-edit me-1"></i>修改昵称
+            </button>
+        </div>
+        
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>军棋大小判定器</h3>
+    </div>
+    <div class="card-body p-4">
+        <a href="/compare" class="d-grid text-decoration-none">
+            <button type="submit" class="btn btn-primary btn-lg">
+                跳转 <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </button>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-chess-board me-2"></i>房间列表</h4>
+    </div>
+    <div class="card-body p-4">
+        <div class="row">
+            {% for room_id in range(1, 10) %}
+            <div class="col-md-4 col-sm-6 mb-3">
+                <a href="/play/{{ room_id }}" class="text-decoration-none">
+                    <div class="card room-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chess-rook fa-3x mb-2 text-primary"></i>
+                            <h5 class="card-title">房间 {{ room_id }}</h5>
+                            <p class="card-text text-muted small">点击进入对战</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 修改昵称的模态框 -->
+<div class="modal fade" id="usernameModal" tabindex="-1" aria-labelledby="usernameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="usernameModalLabel">修改昵称</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/update_username">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="new_username" class="form-label">新昵称</label>
+                        <input type="text" class="form-control" id="new_username" name="new_username" value="{{ username }}" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存更改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 添加房间卡片的悬停效果
+document.addEventListener('DOMContentLoaded', function() {
+    const roomCards = document.querySelectorAll('.room-card');
+    roomCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+            this.style.transition = 'transform 0.3s ease';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

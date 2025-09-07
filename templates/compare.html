@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>军棋大小判定器 - 双玩家版</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .screen {
+            padding: 30px;
+            display: none;
+            flex-direction: column;
+            min-height: 500px;
+        }
+        
+        .active {
+            display: flex;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #1a2a6c;
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        h2 {
+            color: #b21f1f;
+            margin: 20px 0 15px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .piece-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .piece-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .piece-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .piece-card.selected {
+            border-color: #1a2a6c;
+            background-color: #e6f0ff;
+        }
+        
+        .piece-name {
+            font-weight: bold;
+            color: #1a2a6c;
+            font-size: 1.1rem;
+        }
+        
+        .piece-rank {
+            color: #b21f1f;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .btn {
+            padding: 14px 25px;
+            background: linear-gradient(90deg, #1a2a6c, #b21f1f);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            width: 100%;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .result-content {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .result-title {
+            font-size: 1.8rem;
+            color: #1a2a6c;
+            margin-bottom: 15px;
+        }
+        
+        .result-outcome {
+            font-size: 1.8rem;
+            color: #b21f1f;
+            margin: 20px 0;
+            font-weight: bold;
+            min-height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .player-indicator {
+            background: linear-gradient(90deg, #1a2a6c, #b21f1f);
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            background: #e6f0ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-size: 0.95rem;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo span {
+            display: inline-block;
+            background: #1a2a6c;
+            color: white;
+            width: 50px;
+            height: 50px;
+            line-height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            margin: 0 5px;
+        }
+        
+        .player-choice {
+            font-size: 1.2rem;
+            margin: 10px 0;
+            color: #1a2a6c;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 480px) {
+            .piece-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .result-outcome {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 欢迎界面 -->
+        <div id="welcome-screen" class="screen active">
+            <header>
+                <div class="logo">
+                    <span>军</span>
+                    <span>棋</span>
+                </div>
+                <h1>军棋大小判定器</h1>
+                <p class="subtitle">双玩家对战版</p>
+            </header>
+            
+            <div class="instructions">
+                <p>欢迎使用军棋大小判定器！这是一个双玩家对战工具：</p>
+                <ul style="padding-left: 20px; margin-top: 10px;">
+                    <li>玩家一和玩家二分别选择自己的棋子</li>
+                    <li>双方无法看到对方的选择</li>
+                    <li>系统会根据军棋规则判定胜负</li>
+                    <li>结果只显示胜负，不显示具体规则解释</li>
+                </ul>
+            </div>
+            
+            <button id="start-btn" class="btn">开始游戏</button>
+        </div>
+        
+        <!-- 玩家一界面 -->
+        <div id="player1-screen" class="screen">
+            <div class="player-indicator">玩家一：请选择您的棋子</div>
+            
+            <h2>选择您的棋子</h2>
+            <div class="piece-grid">
+                <div class="piece-card" data-piece="司令">
+                    <div class="piece-name">司令</div>
+                    <div class="piece-rank">等级: 12</div>
+                </div>
+                <div class="piece-card" data-piece="军长">
+                    <div class="piece-name">军长</div>
+                    <div class="piece-rank">等级: 11</div>
+                </div>
+                <div class="piece-card" data-piece="师长">
+                    <div class="piece-name">师长</div>
+                    <div class="piece-rank">等级: 10</div>
+                </div>
+                <div class="piece-card" data-piece="旅长">
+                    <div class="piece-name">旅长</div>
+                    <div class="piece-rank">等级: 9</div>
+                </div>
+                <div class="piece-card" data-piece="团长">
+                    <div class="piece-name">团长</div>
+                    <div class="piece-rank">等级: 8</div>
+                </div>
+                <div class="piece-card" data-piece="营长">
+                    <div class="piece-name">营长</div>
+                    <div class="piece-rank">等级: 7</div>
+                </div>
+                <div class="piece-card" data-piece="连长">
+                    <div class="piece-name">连长</div>
+                    <div class="piece-rank">等级: 6</div>
+                </div>
+                <div class="piece-card" data-piece="排长">
+                    <div class="piece-name">排长</div>
+                    <div class="piece-rank">等级: 5</div>
+                </div>
+                <div class="piece-card" data-piece="工兵">
+                    <div class="piece-name">工兵</div>
+                    <div class="piece-rank">等级: 4</div>
+                </div>
+                <div class="piece-card" data-piece="炸弹">
+                    <div class="piece-name">炸弹</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+                <div class="piece-card" data-piece="地雷">
+                    <div class="piece-name">地雷</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+                <div class="piece-card" data-piece="军旗">
+                    <div class="piece-name">军旗</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+            </div>
+            
+            <button id="player1-submit" class="btn" disabled>确认选择</button>
+        </div>
+        
+        <!-- 玩家二界面 -->
+        <div id="player2-screen" class="screen">
+            <div class="player-indicator">玩家二：请选择您的棋子</div>
+            
+            <h2>选择您的棋子</h2>
+            <div class="piece-grid">
+                <div class="piece-card" data-piece="司令">
+                    <div class="piece-name">司令</div>
+                    <div class="piece-rank">等级: 12</div>
+                </div>
+                <div class="piece-card" data-piece="军长">
+                    <div class="piece-name">军长</div>
+                    <div class="piece-rank">等级: 11</div>
+                </div>
+                <div class="piece-card" data-piece="师长">
+                    <div class="piece-name">师长</div>
+                    <div class="piece-rank">等级: 10</div>
+                </div>
+                <div class="piece-card" data-piece="旅长">
+                    <div class="piece-name">旅长</div>
+                    <div class="piece-rank">等级: 9</div>
+                </div>
+                <div class="piece-card" data-piece="团长">
+                    <div class="piece-name">团长</div>
+                    <div class="piece-rank">等级: 8</div>
+                </div>
+                <div class="piece-card" data-piece="营长">
+                    <div class="piece-name">营长</div>
+                    <div class="piece-rank">等级: 7</div>
+                </div>
+                <div class="piece-card" data-piece="连长">
+                    <div class="piece-name">连长</div>
+                    <div class="piece-rank">等级: 6</div>
+                </div>
+                <div class="piece-card" data-piece="排长">
+                    <div class="piece-name">排长</div>
+                    <div class="piece-rank">等级: 5</div>
+                </div>
+                <div class="piece-card" data-piece="工兵">
+                    <div class="piece-name">工兵</div>
+                    <div class="piece-rank">等级: 4</div>
+                </div>
+                <div class="piece-card" data-piece="炸弹">
+                    <div class="piece-name">炸弹</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+                <div class="piece-card" data-piece="地雷">
+                    <div class="piece-name">地雷</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+                <div class="piece-card" data-piece="军旗">
+                    <div class="piece-name">军旗</div>
+                    <div class="piece-rank">特殊规则</div>
+                </div>
+            </div>
+            
+            <button id="player2-submit" class="btn" disabled>确认选择</button>
+        </div>
+        
+        <!-- 结果界面 -->
+        <div id="result-screen" class="screen">
+            <header>
+                <h1>对战结果</h1>
+            </header>
+            
+            <div class="result-content">
+                <div class="result-title">玩家一 vs 玩家二</div>
+                <div id="player1-choice" class="player-choice">玩家一: ???</div>
+                <div id="player2-choice" class="player-choice">玩家二: ???</div>
+                <div id="battle-result" class="result-outcome">结果加载中...</div>
+            </div>
+            
+            <button id="play-again" class="btn">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取界面元素
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const player1Screen = document.getElementById('player1-screen');
+            const player2Screen = document.getElementById('player2-screen');
+            const resultScreen = document.getElementById('result-screen');
+            
+            // 获取按钮元素
+            const startBtn = document.getElementById('start-btn');
+            const player1Submit = document.getElementById('player1-submit');
+            const player2Submit = document.getElementById('player2-submit');
+            const playAgainBtn = document.getElementById('play-again');
+            
+            // 棋子选择变量
+            let player1Choice = null;
+            let player2Choice = null;
+            
+            // 棋子等级定义
+            const ranks = {
+                '司令': 12,
+                '军长': 11,
+                '师长': 10,
+                '旅长': 9,
+                '团长': 8,
+                '营长': 7,
+                '连长': 6,
+                '排长': 5,
+                '工兵': 4,
+                '炸弹': 99,  // 特殊处理
+                '地雷': 98,  // 特殊处理
+                '军旗': 1
+            };
+            
+            // 显示指定界面
+            function showScreen(screen) {
+                // 隐藏所有界面
+                welcomeScreen.classList.remove('active');
+                player1Screen.classList.remove('active');
+                player2Screen.classList.remove('active');
+                resultScreen.classList.remove('active');
+                
+                // 显示指定界面
+                screen.classList.add('active');
+            }
+            
+            // 重置游戏状态
+            function resetGame() {
+                // 重置选择
+                player1Choice = null;
+                player2Choice = null;
+                
+                // 清除sessionStorage
+                sessionStorage.removeItem('player1Choice');
+                sessionStorage.removeItem('player2Choice');
+                
+                // 清除玩家一的选择状态
+                const player1Cards = player1Screen.querySelectorAll('.piece-card');
+                player1Cards.forEach(card => {
+                    card.classList.remove('selected');
+                });
+                player1Submit.disabled = true;
+                
+                // 清除玩家二的选择状态
+                const player2Cards = player2Screen.querySelectorAll('.piece-card');
+                player2Cards.forEach(card => {
+                    card.classList.remove('selected');
+                });
+                player2Submit.disabled = true;
+                
+                // 重置结果显示
+                document.getElementById('player1-choice').textContent = '玩家一: ???';
+                document.getElementById('player2-choice').textContent = '玩家二: ???';
+                document.getElementById('battle-result').textContent = '结果加载中...';
+            }
+            
+            // 开始游戏按钮事件
+            startBtn.addEventListener('click', function() {
+                resetGame();
+                showScreen(player1Screen);
+            });
+            
+            // 玩家一选择棋子
+            const player1Cards = player1Screen.querySelectorAll('.piece-card');
+            player1Cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // 移除其他卡片的选中状态
+                    player1Cards.forEach(c => c.classList.remove('selected'));
+                    
+                    // 选中当前卡片
+                    this.classList.add('selected');
+                    
+                    // 保存选择
+                    player1Choice = this.getAttribute('data-piece');
+                    
+                    // 启用提交按钮
+                    player1Submit.disabled = false;
+                });
+            });
+            
+            // 玩家一提交选择
+            player1Submit.addEventListener('click', function() {
+                // 保存玩家一的选择到sessionStorage
+                sessionStorage.setItem('player1Choice', player1Choice);
+                
+                // 转到玩家二界面
+                showScreen(player2Screen);
+            });
+            
+            // 玩家二选择棋子
+            const player2Cards = player2Screen.querySelectorAll('.piece-card');
+            player2Cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // 移除其他卡片的选中状态
+                    player2Cards.forEach(c => c.classList.remove('selected'));
+                    
+                    // 选中当前卡片
+                    this.classList.add('selected');
+                    
+                    // 保存选择
+                    player2Choice = this.getAttribute('data-piece');
+                    
+                    // 启用提交按钮
+                    player2Submit.disabled = false;
+                });
+            });
+            
+            // 玩家二提交选择
+            player2Submit.addEventListener('click', function() {
+                // 保存玩家二的选择到sessionStorage
+                sessionStorage.setItem('player2Choice', player2Choice);
+                
+                // 显示结果
+                showResult();
+                
+                // 转到结果界面
+                showScreen(resultScreen);
+            });
+            
+            // 再玩一次按钮事件
+            playAgainBtn.addEventListener('click', function() {
+                resetGame();
+                showScreen(welcomeScreen);
+            });
+            
+            // 显示对战结果
+            function showResult() {
+                // 从sessionStorage获取选择
+                const p1Choice = sessionStorage.getItem('player1Choice');
+                const p2Choice = sessionStorage.getItem('player2Choice');
+                
+                // 显示双方选择
+                
+                
+                // 判定结果
+                const result = judgeResult(p1Choice, p2Choice);
+                
+                // 显示结果
+                document.getElementById('battle-result').textContent = result;
+            }
+            
+            // 判定胜负
+            function judgeResult(piece1, piece2) {
+                // 相同棋子
+                if (piece1 === piece2) {
+                    return "同归于尽！";
+                }
+                
+                // 炸弹特殊规则
+                if (piece1 === '炸弹' || piece2 === '炸弹') {
+                    return "同归于尽！";
+                }
+                
+                // 地雷特殊规则
+                if (piece1 === '地雷') {
+                    return piece2 === '工兵' ? "玩家二胜利！" : "玩家一胜利！";
+                }
+                
+                if (piece2 === '地雷') {
+                    return piece1 === '工兵' ? "玩家一胜利！" : "玩家二胜利！";
+                }
+                
+                // 军旗规则
+                if (piece1 === '军旗') {
+                    return "玩家二胜利！";
+                }
+                
+                if (piece2 === '军旗') {
+                    return "玩家一胜利！";
+                }
+                
+                // 普通棋子比较
+                const rank1 = ranks[piece1];
+                const rank2 = ranks[piece2];
+                
+                if (rank1 > rank2) {
+                    return "玩家一胜利！";
+                } else if (rank1 < rank2) {
+                    return "玩家二胜利！";
+                } else {
+                    return "同归于尽！";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

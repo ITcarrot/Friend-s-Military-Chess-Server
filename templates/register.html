@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}登录{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>军棋大小判定器</h3>
+    </div>
+    <div class="card-body p-4">
+        <a href="/compare" class="d-grid text-decoration-none">
+            <button type="submit" class="btn btn-primary btn-lg">
+                跳转 <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </button>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="logo">
+            <i class="fas fa-lock"></i>
+        </div>
+        <h3>用户登录</h3>
+    </div>
+    <div class="card-body p-4">
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/register">
+            <div class="mb-3">
+                <label for="username" class="form-label">用户昵称</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control" id="username" name="username" required placeholder="请输入您的昵称">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="invitation_code" class="form-label">邀请码</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-key"></i></span>
+                    <input type="text" class="form-control" id="invitation_code" name="invitation_code" required placeholder="请输入邀请码">
+                </div>
+                <div class="form-text">请联系管理员获取邀请码</div>
+            </div>
+            
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-user-plus me-2"></i>登录
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
