@@ -3,6 +3,9 @@ from datetime import datetime
 import hashlib
 import uuid
 
+import logging
+logging.basicConfig(level=logging.DEBUG, filename='server.log', filemode='a')
+
 app = Flask(__name__)
 from db_tables import db_init
 db_init(app)
@@ -33,7 +36,7 @@ def check_login(func):
         
         # 验证token是否正确
         if user_id and token:
-            expected_token = hashlib.md5((user_id + INVITATION_CODE).encode()).hexdigest()
+            expected_token = hashlib.sha256((user_id + INVITATION_CODE).encode()).hexdigest()
             if token == expected_token:
                 # 验证通过，执行原函数
                 return func(*args, **kwargs)
@@ -75,7 +78,7 @@ def register():
             user_id = str(uuid.uuid4())[:8]  # 取UUID的前8位作为用户ID
             if not User.query.filter_by(user_id=user_id).first():
                 break
-        token = hashlib.md5((user_id + INVITATION_CODE).encode()).hexdigest()
+        token = hashlib.sha256((user_id + INVITATION_CODE).encode()).hexdigest()
         
         # 创建响应并设置cookie
         response = make_response(redirect('/'))
