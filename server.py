@@ -26,6 +26,16 @@ COLORS = [
     "#17becf",  # Cyan
 ]
 
+def send_system_message(room_id, content):
+    # 创建系统消息
+    message = Message(
+        room_id=room_id,
+        sender='系统',
+        content=content,
+        is_system=True
+    )
+    db.session.add(message)
+    db.session.commit()
 
 def check_login(func):
     """检查登录状态的装饰器"""
@@ -59,6 +69,15 @@ def index():
     """首页"""
     user_id = request.cookies.get('user_id')
     username = User.query.filter_by(user_id=user_id).first().username
+    
+    rooms = Room.query.all()
+    for room in rooms:
+        # 检查用户是否在这个房间的任一座位上
+        for i in range(1, 9):
+            attr = f'player{i}_id'
+            if getattr(room, attr) == user_id:
+                return redirect(f'/play/{room.room_id}')
+    
     return render_template('index.html', username=username, user_id=user_id)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -170,6 +189,9 @@ def take_seat(room_id, seat_num):
     user_id = request.cookies.get('user_id')
     room = Room.query.get_or_404(room_id)
     
+    if room.active:
+        return jsonify({'status': 'error', 'message': '游戏进行中，无法调整座位'})
+    
     # 检查座位是否可用
     if seat_num < 1 or seat_num > room.room_type:
         return jsonify({'status': 'error', 'message': '无效的座位号'})
@@ -218,16 +240,27 @@ def leave_seat(room_id, seat_num):
 def kick_player(room_id, seat_num):
     """踢出玩家API"""
     user_id = request.cookies.get('user_id')
+    user_name = User.query.get(user_id).username
     room = Room.query.get_or_404(room_id)
+    
+    if room.active:
+        return jsonify({'status': 'error', 'message': '游戏进行中，无法踢人'})
     
     # 检查座位号是否有效
     if seat_num < 1 or seat_num > 8:
         return jsonify({'status': 'error', 'message': '无效的座位号'})
     
-    # 踢出玩家
+    # 获取被踢玩家的用户名
     seat_attr = f'player{seat_num}_id'
+    kicked_player_id = getattr(room, seat_attr)
+    kicked_player = User.query.get(kicked_player_id) if kicked_player_id else None
+    kicked_username = kicked_player.username if kicked_player else '未知玩家'
+    
+    # 踢出玩家
     setattr(room, seat_attr, None)
     db.session.commit()
+    # 发送系统消息通知房间内玩家
+    send_system_message(room_id, f'玩家 {user_name} 把 {kicked_username} 踢出了房间。')
     
     return jsonify({'status': 'success'})
 
@@ -235,9 +268,12 @@ def kick_player(room_id, seat_num):
 @check_login
 def change_room_type(room_id):
     """修改房间类型API"""
-    user_id = request.cookies.get('user_id')
+    user_name = User.query.get(request.cookies.get('user_id')).username
     room = Room.query.get_or_404(room_id)
     new_type = request.json.get('room_type')
+    
+    if room.active:
+        return jsonify({'status': 'error', 'message': '游戏进行中，无法修改房间类型'})
     
     # 验证房间类型
     if new_type not in [2, 4, 6, 8]:
@@ -254,6 +290,7 @@ def change_room_type(room_id):
             setattr(room, seat_attr, None)
     
     db.session.commit()
+    send_system_message(room_id, f'房间类型已被 {user_name} 修改为 {new_type} 人房。')
     
     return jsonify({'status': 'success'})
 
@@ -262,6 +299,7 @@ def change_room_type(room_id):
 def start_game(room_id):
     """开始游戏API"""
     user_id = request.cookies.get('user_id')
+    user_name = User.query.get(user_id).username
     room = Room.query.get_or_404(room_id)
     
     # 检查用户是否在房间中
@@ -286,8 +324,78 @@ def start_game(room_id):
     # 开始游戏
     room.active = True
     db.session.commit()
+    send_system_message(room_id, f'{user_name} 开始了游戏')
     
     return jsonify({'status': 'success'})
+
+@app.route('/api/stop_game/<int:room_id>', methods=['POST'])
+@check_login
+def stop_game(room_id):
+    """结束游戏API"""
+    user_id = request.cookies.get('user_id')
+    user_name = User.query.get(user_id).username
+    room = Room.query.get_or_404(room_id)
+    
+    # 检查房间中的用户
+    user_in_room = False
+    has_online_player = False
+    for seat_num, player_id, player in room.get_players():
+        if player_id:
+            if player.is_online():
+                has_online_player = True
+            if player_id == user_id:
+                user_in_room = True
+    
+    # 检查房间状态
+    if not room.active:
+        return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+    
+    if not user_in_room and has_online_player:
+        return jsonify({'status': 'error', 'message': '房间里还有其他玩家，您无法结束游戏'})
+    
+    # 结束游戏
+    room.active = False
+    db.session.commit()
+    send_system_message(room_id, f'{user_name} 结束了游戏')
+    
+    return jsonify({'status': 'success'})
+
+@app.route('/api/chat/send', methods=['POST'])
+@check_login
+def send_chat_message():
+    """发送聊天消息"""
+    user_id = request.cookies.get('user_id')
+    username = User.query.get(user_id).username
+    room_id = request.json.get('room_id')
+    content = request.json.get('content')
+    
+    if not content or not room_id:
+        return jsonify({'status': 'error', 'message': '消息内容或房间ID不能为空'})
+    
+    # 创建消息
+    message = Message(
+        room_id=room_id,
+        sender=username,
+        content=content,
+        is_system=False
+    )
+    db.session.add(message)
+    db.session.commit()
+    
+    return jsonify({'status': 'success', 'message': message.to_dict()})
+
+@app.route('/api/chat/messages/<int:room_id>')
+@check_login
+def get_chat_messages(room_id):
+    """获取聊天消息"""
+    # 获取最近50条消息
+    messages = Message.query.filter_by(room_id=room_id).order_by(Message.timestamp.desc()).limit(50).all()
+    messages.reverse()  # 反转顺序，使最早的消息在前
+    
+    return jsonify({
+        'status': 'success',
+        'messages': [msg.to_dict() for msg in messages]
+    })
 
 if __name__ == '__main__':
     app.run(debug=False)

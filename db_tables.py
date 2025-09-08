@@ -74,6 +74,26 @@ def db_init(app):
             """检查是否可以开始游戏"""
             return self.is_full() and not self.active
     
+    global Message
+    class Message(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        room_id = db.Column(db.Integer, nullable=False)
+        sender = db.Column(db.String(80), nullable=False)
+        content = db.Column(db.Text, nullable=False)
+        timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
+        is_system = db.Column(db.Boolean, default=False)  # 是否为系统消息
+        
+        def to_dict(self):
+            """转换为字典格式"""
+            return {
+                'id': self.id,
+                'room_id': self.room_id,
+                'sender': self.sender,
+                'content': self.content,
+                'timestamp': self.timestamp.strftime('%m-%d %H:%M:%S'),
+                'is_system': self.is_system
+            }
+    
     with app.app_context():
         db.create_all()
         # 创建9个默认房间

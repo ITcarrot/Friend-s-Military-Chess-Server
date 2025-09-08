@@ -14,10 +14,7 @@
     <div class="col-md-4">
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">房间状态</h4>
-                <span class="badge bg-{% if room.status == '空闲' %}success{% else %}danger{% endif %}">
-                    {{ room.status }}
-                </span>
+                <h4 class="mb-0">房间控制</h4>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -31,8 +28,11 @@
                 </div>
                 
                 <div class="d-grid">
-                    <button id="startGameBtn" class="btn btn-success" {% if not room.can_start_game() %}disabled{% endif %}>
+                    <button id="startGameBtn" class="btn btn-success mb-2" {% if not room.can_start_game() %}disabled{% endif %} {% if room.active %}style="display:none"{% endif %}>
                         <i class="fas fa-play me-2"></i>开始游戏
+                    </button>
+                    <button id="EndGameBtn" class="btn btn-danger" {% if not room.active %}style="display:none"{% endif %}>
+                        <i class="fas fa-stop me-2"></i>结束游戏
                     </button>
                 </div>
             </div>
@@ -59,8 +59,33 @@
         </div>
     </div>
     
-    <!-- 右侧：棋盘区域 -->
+    <!-- 右侧：聊天和棋盘 -->
     <div class="col-md-8">
+        <!-- 聊天窗口 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-comments me-2"></i>聊天窗口</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="chatWindow" style="height: 200px; overflow-y: auto; padding: 10px;">
+                    <!-- 聊天消息将通过JavaScript动态更新 -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="chatInput" placeholder="输入消息..." autocomplete="off">
+                    <button class="btn btn-primary" id="sendMessageBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- 棋盘区域 -->
         <div class="card">
             <div class="card-header">
                 <h3 class="mb-0"><i class="fas fa-chess-rook me-2"></i>军旗棋盘 - 房间 {{ room_id }}</h3>
@@ -91,15 +116,25 @@ let colors = {{ colors | tojson }};
 let userId = "{{ user_id }}";
 let roomId = {{ room_id }};
 let userSeat = 0;
+let isActive = {{ 'true' if room.active else 'false' }};
 
 // 更新房间状态
 function updateRoomStatus() {
     $.getJSON(`/api/room_status/${roomId}`, function(data) {
+        isActive = data.status;
+
         // 更新房间状态
         $('#roomTypeSelect').val(data.room_type);
         
         // 更新开始游戏按钮
         $('#startGameBtn').prop('disabled', !data.can_start);
+        if (data.status) {
+            $('#startGameBtn').hide();
+            $('#EndGameBtn').show();
+        } else {
+            $('#startGameBtn').show();
+            $('#EndGameBtn').hide();
+        }
         
         // 创建所有座位的数组
         let allSeats = [];
@@ -180,6 +215,69 @@ function updateRoomStatus() {
     });
 }
 
+// 获取聊天消息
+let last_msg_timestamp = '';
+function updateChatMessages() {
+    $.getJSON(`/api/chat/messages/${roomId}`, function(data) {
+        if (data.status === 'success') {
+            let messagesHtml = '';
+            
+            // 生成消息HTML
+            data.messages.forEach(msg => {
+                if (msg.is_system) {
+                    // 系统消息
+                    messagesHtml += `
+                        <div class="mb-2 text-center">
+                            <small class="text-muted">[${msg.timestamp}] ${msg.content}</small>
+                        </div>
+                    `;
+                } else {
+                    // 用户消息
+                    messagesHtml += `
+                        <div class="mb-2">
+                            <strong>${msg.sender}:</strong> ${msg.content}
+                            <small class="text-muted float-end">${msg.timestamp}</small>
+                        </div>
+                    `;
+                }
+            });
+            
+            $('#chatWindow').html(messagesHtml);
+            
+            // 滚动到底部
+            new_last_msg_timestamp = data.messages.length > 0 ? data.messages[data.messages.length - 1].timestamp : '';
+            if(new_last_msg_timestamp !== last_msg_timestamp){
+                last_msg_timestamp = new_last_msg_timestamp;
+                $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
+            }
+        }
+    });
+}
+
+// 发送聊天消息
+function sendChatMessage() {
+    const content = $('#chatInput').val().trim();
+    if (content) {
+        $.ajax({
+            url: '/api/chat/send',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                room_id: roomId,
+                content: content
+            }),
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#chatInput').val(''); // 清空输入框
+                    updateChatMessages(); // 更新消息显示
+                } else {
+                    alert('发送消息失败: ' + response.message);
+                }
+            }
+        });
+    }
+}
+
 // 绑定事件处理函数
 function bindEvents() {
     // 占座按钮
@@ -197,13 +295,15 @@ function bindEvents() {
     // 离座按钮
     $('.leave-btn').click(function() {
         const seat = $(this).data('seat');
-        $.post(`/api/leave_seat/${roomId}/${seat}`, function(response) {
-            if (response.status === 'success') {
-                updateRoomStatus();
-            } else {
-                alert(response.message);
-            }
-        });
+        if(!isActive || confirm('当前游戏正在进行中，离座将会退出游戏。确定要离座吗？')){
+            $.post(`/api/leave_seat/${roomId}/${seat}`, function(response) {
+                if (response.status === 'success') {
+                    updateRoomStatus();
+                } else {
+                    alert(response.message);
+                }
+            });
+        }
     });
     
     // 踢人按钮
@@ -254,15 +354,43 @@ $('#startGameBtn').click(function() {
     });
 });
 
+// 结束游戏
+$('#EndGameBtn').click(function() {
+    if (confirm('确定要结束当前游戏吗？')) {
+        $.post(`/api/stop_game/${roomId}`, function(response) {
+            if (response.status === 'success') {
+                updateRoomStatus();
+            } else {
+                alert(response.message);
+            }
+        });
+    }
+});
+
+// 发送消息按钮点击事件
+$('#sendMessageBtn').click(sendChatMessage);
+
+// 输入框回车键发送消息
+$('#chatInput').keypress(function(e) {
+    if (e.which === 13) { // 回车键
+        sendChatMessage();
+        return false; // 阻止默认行为
+    }
+});
+
 // 定时更新房间状态和用户最后登录时间
 setInterval(function() {
     updateRoomStatus();
     $.post('/api/update_last_login');
 }, 500);
 
+// 定时更新聊天消息
+setInterval(updateChatMessages, 1000);
+
 // 初始加载
 $(document).ready(function() {
     updateRoomStatus();
+    updateChatMessages();
 });
 </script>
 {% endblock %}
