@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, make_response, jsonify
+from flask import Flask, render_template, request, redirect, make_response, jsonify, send_from_directory
 from datetime import datetime
-import hashlib
-import uuid
+import hashlib, uuid, re, math, json
+from game import *
 
 import logging
 logging.basicConfig(level=logging.DEBUG, filename='server.log', filemode='a')
@@ -300,30 +300,37 @@ def start_game(room_id):
     """开始游戏API"""
     user_id = request.cookies.get('user_id')
     user_name = User.query.get(user_id).username
-    room = Room.query.get_or_404(room_id)
-    
-    # 检查用户是否在房间中
-    user_in_room = False
-    for i in range(1, 9):
-        attr = f'player{i}_id'
-        if getattr(room, attr) == user_id:
-            user_in_room = True
-            break
-    
-    if not user_in_room:
-        return jsonify({'status': 'error', 'message': '您没有落座，无法开始游戏'})
-    
-    # 检查房间是否已满
-    if not room.is_full():
-        return jsonify({'status': 'error', 'message': '房间未满，无法开始游戏'})
-    
-    # 检查房间状态
-    if room.active:
-        return jsonify({'status': 'error', 'message': '游戏已在进行中'})
-    
-    # 开始游戏
-    room.active = True
     db.session.commit()
+    
+    with db.session.begin():
+        room = Room.query.get_or_404(room_id)
+    
+        # 检查用户是否在房间中
+        user_in_room = False
+        for i in range(1, 9):
+            attr = f'player{i}_id'
+            if getattr(room, attr) == user_id:
+                user_in_room = True
+                break
+        
+        if not user_in_room:
+            return jsonify({'status': 'error', 'message': '您没有落座，无法开始游戏'})
+        
+        # 检查房间是否已满
+        if not room.is_full():
+            return jsonify({'status': 'error', 'message': '房间未满，无法开始游戏'})
+        
+        # 检查房间状态
+        if room.active:
+            return jsonify({'status': 'error', 'message': '游戏已在进行中'})
+        
+        # 开始游戏
+        room.active = True
+        room.battle = None
+        chess_board = ChessBoard(room.room_type)
+        record = Record(room_id=room.room_id, board_state=chess_board.jsonify())
+        db.session.add(record)
+    
     send_system_message(room_id, f'{user_name} 开始了游戏')
     
     return jsonify({'status': 'success'})
@@ -396,6 +403,188 @@ def get_chat_messages(room_id):
         'status': 'success',
         'messages': [msg.to_dict() for msg in messages]
     })
+
+@app.route('/api/board/<int:room_id>')
+@check_login
+def get_board(room_id):
+    """获取棋盘状态API"""
+    user_id = request.cookies.get('user_id')
+    room = Room.query.get_or_404(room_id)
+    user_team = room.get_player_team(user_id)
+    
+    if not room.active:
+        return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+    
+    record = Record.query.filter_by(room_id=room_id).order_by(Record.id.desc()).first()
+    if not record:
+        return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
+    
+    chess_board = ChessBoard.from_json(record.board_state)
+    has40 = [False] * (room.room_type + 1)
+    for chess in chess_board.chesses:
+        if chess.alive and chess.name == "司":
+            has40[chess.team] = True
+    for chess in chess_board.chesses:
+        # 检查用户是否有权限查看该棋子
+        if chess.team != user_team and (chess.name != '旗' or has40[chess.team]):
+            chess.name = ""
+    
+    battle = json.loads(room.battle) if room.battle else None
+    if battle:
+        battle['battle_time'] = math.ceil(datetime.now().timestamp() - battle['battle_time'])
+    
+    return jsonify({
+        'status': 'success',
+        'board': chess_board.to_dict(),
+        'battle': battle
+    })
+
+@app.route('/api/move_chess', methods=['POST'])
+@check_login
+def move_chess():
+    """移动棋子API"""
+    user_id = request.cookies.get('user_id')
+    room_id = request.json.get('room_id')
+    chess_id = request.json.get('chess_id')
+    new_x = request.json.get('new_x')
+    new_y = request.json.get('new_y')
+        
+    if None in [room_id, chess_id, new_x, new_y]:
+        return jsonify({'status': 'error', 'message': '参数不完整'})
+    
+    with db.session.begin():
+        room = Room.query.get_or_404(room_id)
+        
+        if not room.active:
+            return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+        
+        record = Record.query.filter_by(room_id=room_id).order_by(Record.id.desc()).first()
+        if not record:
+            return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
+        
+        chess_board = ChessBoard.from_json(record.board_state)
+        
+        # 查找要移动的棋子
+        chess = next((c for c in chess_board.chesses if c.id == chess_id), None)
+        if not chess or not chess.alive:
+            return jsonify({'status': 'error', 'message': '棋子不存在或已被吃掉'})
+        
+        # 检查用户是否有权限移动该棋子
+        user_team = room.get_player_team(user_id)
+        if chess.team != user_team:
+            return jsonify({'status': 'error', 'message': '您无权移动此棋子'})
+        
+        # 更新棋子位置
+        old_x, old_y = chess.x, chess.y
+        chess.x = new_x
+        chess.y = new_y
+        chess_board.last_move = (old_x, old_y, new_x, new_y)
+        
+        # 保存新的棋盘状态
+        new_record = Record(room_id=room_id, board_state=chess_board.jsonify())
+        db.session.add(new_record)
+    
+    return jsonify({'status': 'success'})
+
+@app.route('/api/attack_chess', methods=['POST'])
+@check_login
+def attack_chess():
+    """攻击棋子API"""
+    user_id = request.cookies.get('user_id')
+    room_id = request.json.get('room_id')
+    attacker = request.json.get('attacker')
+    defender = request.json.get('defender')
+        
+    if None in [room_id, attacker, defender]:
+        return jsonify({'status': 'error', 'message': '参数不完整'})
+    
+    with db.session.begin():
+        room = Room.query.get_or_404(room_id)
+        user_team = room.get_player_team(user_id)
+    
+        if not room.active:
+            return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+        
+        if room.battle is not None:
+            return jsonify({'status': 'error', 'message': '当前已有未结算的战斗'})
+        
+        if user_team != ChessBoard.to_team_idx(attacker):
+            return jsonify({'status': 'error', 'message': '您无权发起此攻击'})
+        
+        room.battle = json.dumps({
+            'attacker': attacker,
+            'defender': defender,
+            'battle_time': datetime.now().timestamp()
+        })
+    
+    return jsonify({'status': 'success'})
+
+@app.route('/api/respond_attack', methods=['POST'])
+@check_login
+def respond_attack():
+    """响应攻击API"""
+    user_id = request.cookies.get('user_id')
+    room_id = request.json.get('room_id')
+    accept = request.json.get('accept')
+        
+    if None in [room_id, accept]:
+        return jsonify({'status': 'error', 'message': '参数不完整'})
+    
+    with db.session.begin():
+        room = Room.query.get_or_404(room_id)
+        user_team = room.get_player_team(user_id)
+    
+        if not room.active:
+            return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+        
+        if room.battle is None:
+            return jsonify({'status': 'error', 'message': '当前没有战斗需要响应'})
+        
+        battle = json.loads(room.battle)
+        if user_team != ChessBoard.to_team_idx(battle['defender']) and \
+            (user_team == 0 or math.ceil(datetime.now().timestamp() - battle['battle_time']) < 5):
+            return jsonify({'status': 'error', 'message': '您无权响应此攻击'})
+        
+        record = Record.query.filter_by(room_id=room_id).order_by(Record.id.desc()).first()
+        if not record:
+            return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
+        
+        chess_board = ChessBoard.from_json(record.board_state)
+        
+        attacker = next((c for c in chess_board.chesses if c.id == battle['attacker']), None)
+        defender = next((c for c in chess_board.chesses if c.id == battle['defender']), None)
+        
+        if not attacker or not defender or not attacker.alive or not defender.alive:
+            room.battle = None
+            return jsonify({'status': 'error', 'message': '攻击或防守的棋子不存在或已被吃掉'})
+        
+        if accept:
+            result = attacker.compare(defender)
+            if result > 0:
+                defender.alive = False
+            elif result < 0:
+                attacker.alive = False
+            else:
+                attacker.alive = False
+                defender.alive = False
+            
+            chess_board.last_move = (attacker.x, attacker.y, defender.x, defender.y)
+            if result > 0:
+                attacker.x, attacker.y = defender.x, defender.y
+            
+            new_record = Record(room_id=room_id, board_state=chess_board.jsonify())
+            db.session.add(new_record)
+        
+        room.battle = None
+    
+    return jsonify({'status': 'success'})
+
+@app.route('/img/<path:filename>')
+def serve_image(filename):
+    """服务静态图片"""
+    if re.match(r'^[0-9a-zA-Z_-]+\.[a-zA-Z]{3,4}$', filename) is None:
+        return "Invalid filename", 400
+    return send_from_directory('img/', filename)
 
 if __name__ == '__main__':
     app.run(debug=False)

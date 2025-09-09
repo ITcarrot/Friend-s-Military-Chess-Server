@@ -86,22 +86,33 @@
             </div>
         </div>
         <!-- 棋盘区域 -->
-        <div class="card">
+        <div class="card" style="width: 1032px;">
             <div class="card-header">
                 <h3 class="mb-0"><i class="fas fa-chess-rook me-2"></i>军旗棋盘 - 房间 {{ room_id }}</h3>
             </div>
             <div class="card-body">
-                <div class="text-center my-4">
-                    <div class="chess-board mx-auto" style="width: 400px; height: 400px; background-color: #deb887; position: relative;">
-                        <!-- 简单的棋盘网格 -->
-                        {% for i in range(0, 11) %}
-                        <div style="position: absolute; top: {{ i * 40 }}px; left: 0; width: 100%; height: 1px; background-color: #000;"></div>
-                        <div style="position: absolute; left: {{ i * 40 }}px; top: 0; width: 1px; height: 100%; background-color: #000;"></div>
-                        {% endfor %}
-                        
-                        <!-- 棋盘中间的河流 -->
-                        <div style="position: absolute; top: 160px; left: 40px; width: 320px; height: 80px; background-color: #87ceeb; opacity: 0.6;"></div>
-                        <div style="position: absolute; top: 170px; left: 0; width: 100%; text-align: center; color: #0000ff; font-weight: bold;">楚河          汉界</div>
+                <div class="text-center my-4" style="height: 1000px; position: relative;" id="boardContainer">
+                    <img id="board-img" src="" alt="军旗棋盘" class="img-fluid" style="max-height: 100%; max-width: 100%;">
+                    <svg id="arrowLayer" width="100%" height="100%" 
+                        style="position:absolute; top:0; left:0; pointer-events:none; z-index:20;">
+                        <defs>
+                        <marker id="arrowheadB" markerWidth="10" markerHeight="7" 
+                                refX="10" refY="3.5" orient="auto" fill="black">
+                            <polygon points="0 0, 10 3.5, 0 7" />
+                        </marker>
+                        <marker id="arrowheadR" markerWidth="10" markerHeight="7" 
+                                refX="10" refY="3.5" orient="auto" fill="red">
+                            <polygon points="0 0, 10 3.5, 0 7" />
+                        </marker>
+                        </defs>
+                    </svg>
+                    <div id="attackPopup" class="card shadow-sm p-2"
+                        style="position:absolute; z-index:999; width:120px; text-align:center; opacity:0.5;">
+                        <div>允许攻击？<span id="attackCountdown"></span></div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-success me-1" id="acceptAttack">允许</button>
+                            <button class="btn btn-sm btn-danger" id="rejectAttack">拒绝</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -125,6 +136,7 @@ function updateRoomStatus() {
 
         // 更新房间状态
         $('#roomTypeSelect').val(data.room_type);
+        $('#board-img').attr('src', `/img/${data.room_type}.jpg`);
         
         // 更新开始游戏按钮
         $('#startGameBtn').prop('disabled', !data.can_start);
@@ -213,6 +225,132 @@ function updateRoomStatus() {
         // 绑定事件
         bindEvents();
     });
+}
+
+let chessMap = {};
+let selectedId = null;
+function updateBoard(board, battle) {
+  const container = $("#boardContainer");
+  const arrowLayer = $("#arrowLayer");
+
+  // 更新棋子
+  board.chesses.forEach(chess => {
+    let el = chessMap[chess.id];
+    if (!el) {
+        // 新建棋子节点 (Bootstrap 风格圆形按钮)
+        el = $(`<div class="btn btn-sm rounded-circle border fw-bold" 
+                    style="width:40px; height:40px; line-height:28px;
+                            color:white; font-size:18px; z-index:10;
+                            position:absolute; text-align:center;"></div>`);
+        el.attr("data-id", chess.id);
+        el.attr("data-team", chess.team);
+        container.append(el);
+        chessMap[chess.id] = el;
+        // 设置不同队伍颜色
+        el.css("background-color", colors[chess.team]);
+      
+        // 点击棋子事件
+        el.on("click", function(e) {
+            e.stopPropagation(); // 阻止冒泡到棋盘
+            const cid = parseInt($(this).attr("data-id"));
+            const chessObj = board.chesses.find(c => c.id === cid);
+
+            if (chessObj.team == userSeat) {
+                if (selectedId === cid) {
+                    // 再点同一颗 -> 取消选中
+                    $(this).removeClass("border-3 border-dark");
+                    selectedId = null;
+                } else {
+                    // 切换选中
+                    if (selectedId !== null) {
+                        chessMap[selectedId].removeClass("border-3 border-dark");
+                    }
+                    $(this).addClass("border-3 border-dark");
+                    selectedId = cid;
+                }
+            }else{
+                if (selectedId == null)
+                    return; // 不是己方棋子，不能选
+                else {
+                    $.ajax({
+                        url: '/api/attack_chess',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            room_id: roomId,
+                            attacker: selectedId,
+                            defender: cid
+                        }),
+                        success: function(response) {
+                            if (response.status !== 'success') {
+                                alert('攻击失败: ' + response.message);
+                            }
+                        }
+                    });
+                    chessMap[selectedId].removeClass("border-3 border-dark");
+                    selectedId = null;
+                }
+            }
+        });
+    }
+    el.text(chess.name); // 亮旗会变，因此放外面
+
+    if (chess.alive) {
+        el.show();
+
+        // 平滑移动动画（300ms）
+        el.stop(true).animate({
+            left: chess.x + "px",
+            top:  chess.y + "px"
+        }, 300);
+    } else {
+        el.hide();
+    }
+  });
+
+  // 更新箭头
+  arrowLayer.find("line").remove();
+  if (board.last_move) {
+    const [old_x, old_y, new_x, new_y] = board.last_move;
+    let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", old_x + 20); // 棋子中心
+    line.setAttribute("y1", old_y + 20);
+    line.setAttribute("x2", new_x + 20);
+    line.setAttribute("y2", new_y + 20);
+    line.setAttribute("stroke", "black");
+    line.setAttribute("stroke-width", "2");
+    line.setAttribute("marker-end", "url(#arrowheadB)");
+    arrowLayer.append(line);
+  }
+  $('#attackPopup').hide();
+  if (battle) {
+    const attacker = battle.attacker;
+    const defender = battle.defender;
+    const atkChess = board.chesses.find(c => c.id === attacker);
+    const defChess = board.chesses.find(c => c.id === defender);
+    if (atkChess && defChess) {
+        let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", atkChess.x + 20); // 棋子中心
+        line.setAttribute("y1", atkChess.y + 20);
+        line.setAttribute("x2", defChess.x + 20);
+        line.setAttribute("y2", defChess.y + 20);
+        line.setAttribute("stroke", "red");
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("marker-end", "url(#arrowheadR)");
+        arrowLayer.append(line);
+
+        $('#attackPopup').css({
+            left: (defChess.x - 40) + "px",
+            top:  (defChess.y - 60) + "px"
+        });
+        if(battle.battle_time < 5)
+            $('#attackCountdown').text(` ${5 - battle.battle_time}`);
+        else
+            $('#attackCountdown').text(``);
+        if (defChess.team == userSeat || (userSeat !== 0 && battle.battle_time >= 5))
+            $('#attackPopup').show();
+    }
+  }
 }
 
 // 获取聊天消息
@@ -367,6 +505,64 @@ $('#EndGameBtn').click(function() {
     }
 });
 
+// 棋盘点击：移动己方选中棋子
+$("#boardContainer").on("click", function(e) {
+    if (selectedId === null) return;
+
+    const offset = $(this).offset();
+    const x = e.pageX - offset.left - 20;
+    const y = e.pageY - offset.top - 20;
+
+    // 这里你可能要发请求给后端 API 告诉服务器移动动作
+    $.ajax({
+        url: '/api/move_chess',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            room_id: roomId,
+            chess_id: selectedId,
+            new_x: x,
+            new_y: y
+        }),
+        success: function(response) {
+            if (response.status !== 'success') {
+                alert('移动失败: ' + response.message);
+            }
+        }
+    });
+
+    // 移动后取消选中
+    chessMap[selectedId].removeClass("border-3 border-dark");
+    selectedId = null;
+});
+
+function respondToAttack(accept) {
+    $.ajax({
+        url: '/api/respond_attack',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            room_id: roomId,
+            accept: accept
+        }),
+        success: function(response) {
+            if (response.status !== 'success') {
+                alert('操作失败: ' + response.message);
+            }
+        }
+    });
+}
+
+$('#acceptAttack').click(function(e) {
+    e.stopPropagation();
+    respondToAttack(true);
+});
+
+$('#rejectAttack').click(function(e) {
+    e.stopPropagation();
+    respondToAttack(false);
+});
+
 // 发送消息按钮点击事件
 $('#sendMessageBtn').click(sendChatMessage);
 
@@ -382,6 +578,21 @@ $('#chatInput').keypress(function(e) {
 setInterval(function() {
     updateRoomStatus();
     $.post('/api/update_last_login');
+}, 500);
+
+setInterval(() => {
+    if(isActive){
+        $.getJSON(`/api/board/${roomId}`, function(res) {
+            if (res.status === "success") {
+                updateBoard(res.board, res.battle);
+            }
+        });
+    }else{
+        // 清除棋盘
+        Object.values(chessMap).forEach(el => el.remove());
+        chessMap = {};
+        $("#arrowLayer").find("line").remove();
+    }
 }, 500);
 
 // 定时更新聊天消息

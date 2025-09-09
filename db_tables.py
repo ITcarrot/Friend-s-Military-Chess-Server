@@ -31,6 +31,8 @@ def db_init(app):
         room_type = db.Column(db.Integer, nullable=False, default=2)  # 2, 4, 6, 8人
         active = db.Column(db.Boolean, nullable=False, default=False)  # 空闲, 游戏中
         
+        battle = db.Column(db.String(80), nullable=True)
+        
         # 关系定义
         player1 = db.relationship('User', foreign_keys=[player1_id])
         player2 = db.relationship('User', foreign_keys=[player2_id])
@@ -73,6 +75,13 @@ def db_init(app):
         def can_start_game(self):
             """检查是否可以开始游戏"""
             return self.is_full() and not self.active
+        
+        def get_player_team(self, user_id):
+            """获取玩家所在队伍"""
+            for seat_num, player_id, player in self.get_players():
+                if player_id == user_id:
+                    return seat_num
+            return 0
     
     global Message
     class Message(db.Model):
@@ -93,6 +102,12 @@ def db_init(app):
                 'timestamp': self.timestamp.strftime('%m-%d %H:%M:%S'),
                 'is_system': self.is_system
             }
+    
+    global Record
+    class Record(db.Model):
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        room_id = db.Column(db.Integer, nullable=False)
+        board_state = db.Column(db.Text, nullable=False)
     
     with app.app_context():
         db.create_all()
