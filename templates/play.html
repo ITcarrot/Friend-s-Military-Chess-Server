@@ -89,6 +89,8 @@
         <div class="card" style="width: 1032px;">
             <div class="card-header">
                 <h3 class="mb-0"><i class="fas fa-chess-rook me-2"></i>军旗棋盘 - 房间 {{ room_id }}</h3>
+                <button class="btn btn-md btn-danger" id="clearTagBtn" style="position: absolute; right:20px; top:20px;">
+                    清空标记</button>
             </div>
             <div class="card-body">
                 <div class="text-center my-4" style="height: 1000px; position: relative;" id="boardContainer">
@@ -107,13 +109,23 @@
                         </defs>
                     </svg>
                     <div id="attackPopup" class="card shadow-sm p-2"
-                        style="position:absolute; z-index:999; width:120px; text-align:center; opacity:0.5;">
+                        style="position:absolute; z-index:999; width:120px; text-align:center; opacity:0.5; display:none;">
                         <div>允许攻击？<span id="attackCountdown"></span></div>
                         <div class="mt-2">
                             <button class="btn btn-sm btn-success me-1" id="acceptAttack">允许</button>
                             <button class="btn btn-sm btn-danger" id="rejectAttack">拒绝</button>
                         </div>
                     </div>
+                    <div id="tagPopup" class="card shadow-sm p-2"
+                        style="position:absolute; z-index:999; width:180px; text-align:center; display:none;">
+                        <div class="d-flex justify-content-center flex-wrap">
+                            {% for i in ('!', '?', '大', '小', '一', '二', '三', '旗', '司', '军', '师', '旅', '团', '营', '连', '排', '兵', '雷', '弹', 'X') %}
+                            <div class="m-1 rounded-circle border" 
+                                style="width:30px; height:30px; cursor: pointer;" onclick="tagChess('{{ i }}');">
+                                <span style="line-height:30px; font-weight:bold;">{{ i }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
                 </div>
             </div>
         </div>
@@ -229,9 +241,12 @@ function updateRoomStatus() {
 
 let chessMap = {};
 let selectedId = null;
+let selectedForTag = null;
 function updateBoard(board, battle) {
   const container = $("#boardContainer");
   const arrowLayer = $("#arrowLayer");
+  let tags = $.cookie(`tags_${roomId}`) || '{}';
+  tags = JSON.parse(tags);
 
   // 更新棋子
   board.chesses.forEach(chess => {
@@ -269,9 +284,13 @@ function updateBoard(board, battle) {
                     selectedId = cid;
                 }
             }else{
-                if (selectedId == null)
-                    return; // 不是己方棋子，不能选
-                else {
+                if (selectedId == null){
+                    selectedForTag = cid;
+                    $('#tagPopup').css({
+                        left: (chessObj.x + 45) + "px",
+                        top:  (chessObj.y - 10) + "px"
+                    }).show();
+                } else {
                     $.ajax({
                         url: '/api/attack_chess',
                         type: 'POST',
@@ -293,7 +312,10 @@ function updateBoard(board, battle) {
             }
         });
     }
-    el.text(chess.name); // 亮旗会变，因此放外面
+    if (chess.name == '')
+        el.text(tags[chess.id] || ''); // 显示标记
+    else
+        el.text(chess.name); // 亮旗会变，因此放外面
 
     if (chess.alive) {
         el.show();
@@ -413,6 +435,18 @@ function sendChatMessage() {
                 }
             }
         });
+    }
+}
+
+function tagChess(tag) {
+    if (tag === 'X') tag = '';
+    if(selectedForTag !== null){
+        tags = $.cookie(`tags_${roomId}`) || '{}';
+        tags = JSON.parse(tags);
+        tags[selectedForTag] = tag;
+        $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
+        selectedForTag = null;
+        $('#tagPopup').hide();
     }
 }
 
@@ -572,6 +606,10 @@ $('#chatInput').keypress(function(e) {
         sendChatMessage();
         return false; // 阻止默认行为
     }
+});
+
+$('#clearTagBtn').click(function() {
+    $.cookie(`tags_${roomId}`, '', { path: '/' });
 });
 
 // 定时更新房间状态和用户最后登录时间
