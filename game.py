@@ -1,4 +1,4 @@
-import json, random
+import json, random, copy
 
 ALL_CHESS = [
   '司',    # 司令 x1
@@ -73,13 +73,14 @@ class Chess:
 
 class ChessBoard:
     def __init__(self, num_players):
+        chess_pool = copy.copy(ALL_CHESS)
         self.chesses = []
         self.last_move = None # (old_x, old_y, new_x, new_y)
         cnt = 0
         for i in range(1, num_players + 1):
             offset_x, offset_y = INIT_OFFSET[i - 1]
-            random.shuffle(ALL_CHESS)
-            for j, name in enumerate(ALL_CHESS):
+            random.shuffle(chess_pool)
+            for j, name in enumerate(chess_pool):
                 x = (j % 5) * 40 + offset_x
                 y = (j // 5) * 40 + offset_y
                 chess = Chess(cnt, i, name, x, y, True)
