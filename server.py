@@ -608,6 +608,11 @@ def respond_attack():
             if defender.name == '司' and not defender.alive:
                 chess_board.last_battle_result = '40lost'
             
+            if defender.name == '旗':
+                for chess in chess_board.chesses:
+                    if chess.team == defender.team:
+                        chess.alive = False
+            
             chess_board.last_move = (attacker.x, attacker.y, defender.x, defender.y)
             if result > 0:
                 attacker.x, attacker.y = defender.x, defender.y

@@ -301,6 +301,10 @@ function updateBoard(board, battle) {
                         top:  ($(this).position().top - 10) + "px"
                     }).show();
                 } else {
+                    if (chessMap[selectedId].text() == '雷' || chessMap[selectedId].text() == '旗') {
+                        alert('雷和旗不能攻击！');
+                        return;
+                    }
                     $.ajax({
                         url: '/api/attack_chess',
                         type: 'POST',
