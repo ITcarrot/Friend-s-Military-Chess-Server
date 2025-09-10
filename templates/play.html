@@ -297,8 +297,8 @@ function updateBoard(board, battle) {
                 if (selectedId == null){
                     selectedForTag = cid;
                     $('#tagPopup').css({
-                        left: (chessObj.x + 45) + "px",
-                        top:  (chessObj.y - 10) + "px"
+                        left: ($(this).position().left + 45) + "px",
+                        top:  ($(this).position().top - 10) + "px"
                     }).show();
                 } else {
                     $.ajax({
