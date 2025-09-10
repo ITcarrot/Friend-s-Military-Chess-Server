@@ -109,6 +109,15 @@ def db_init(app):
         room_id = db.Column(db.Integer, nullable=False)
         board_state = db.Column(db.Text, nullable=False)
     
+    global Replay
+    class Replay(db.Model):
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        room_id = db.Column(db.Integer, nullable=False)
+        players = db.Column(db.String(80), nullable=False)
+        start_time = db.Column(db.DateTime, nullable=False, default=datetime.now)
+        start_id = db.Column(db.Integer, nullable=False)
+        end_id = db.Column(db.Integer, nullable=True)
+    
     with app.app_context():
         db.create_all()
         # 创建9个默认房间

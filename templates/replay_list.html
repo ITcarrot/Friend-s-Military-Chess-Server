@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}复盘列表{% endblock %}
+
+{% block content %}
+<div class="col-md-8">
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <!-- 左侧按钮 -->
+            <div>
+                <a href="/" class="btn btn-secondary btn-md">
+                    <i class="fas fa-arrow-left me-1"></i> 返回房间列表
+                </a>
+            </div>
+            <!-- 居中标题 -->
+            <h4 class="mb-0 text-center flex-grow-1">
+                <i class="fas fa-history me-2"></i> 对局回放列表
+            </h4>
+            <!-- 右侧占位（保持居中效果） -->
+            <div style="width:145px;"></div>
+        </div>
+        <div class="card-body p-4">
+            {% if replays %}
+            <ul class="list-group">
+                {% for replay in replays %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">玩家: {{ replay.players }}</h5>
+                        <p class="mb-1 text-muted">开始时间: {{ replay.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        <small class="text-muted">房间 {{ replay.room_id }}</small>
+                    </div>
+                    <a href="/replay/{{ replay.id }}" class="btn btn-md btn-primary">
+                        <i class="fas fa-play me-1"></i>观看回放
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted">暂无对局回放。</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

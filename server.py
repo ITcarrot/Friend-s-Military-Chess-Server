@@ -145,6 +145,27 @@ def play_room(room_id):
     return render_template('play.html', room_id=room_id, username=username, 
                           user_id=user_id, room=room, colors=COLORS)
 
+@app.route('/replay_list')
+@check_login
+def replay_list():
+    """对局回放列表页面"""
+    replays = Replay.query.order_by(Replay.id.desc()).all()
+    for replay in replays:
+        replay.players = ', '.join(json.loads(replay.players))
+    return render_template('replay_list.html', replays=replays)
+
+@app.route('/replay/<int:replay_id>')
+@check_login
+def replay_view(replay_id):
+    """对局回放页面"""
+    replay = Replay.query.get_or_404(replay_id)
+    players = json.loads(replay.players)
+    records = Record.query.filter_by(room_id=replay.room_id) \
+                .filter(Record.id.between(replay.start_id, replay.end_id)) \
+                .order_by(Record.id).all()
+    return render_template('replay.html', room_type=len(players), \
+        players=enumerate(players), records=[r.board_state for r in records], colors=COLORS)
+
 @app.route('/api/update_last_login', methods=['POST'])
 @check_login
 def update_last_login():
@@ -330,6 +351,14 @@ def start_game(room_id):
         chess_board = ChessBoard(room.room_type)
         record = Record(room_id=room.room_id, board_state=chess_board.jsonify())
         db.session.add(record)
+        
+    replay = Replay(
+        room_id=room.room_id,
+        players=json.dumps([player.username for _, _, player in room.get_players()[:room.room_type]]),
+        start_id=record.id,
+    )
+    db.session.add(replay)
+    db.session.commit()
     
     send_system_message(room_id, f'{user_name} 开始了游戏')
     
@@ -340,28 +369,32 @@ def start_game(room_id):
 def stop_game(room_id):
     """结束游戏API"""
     user_id = request.cookies.get('user_id')
-    user_name = User.query.get(user_id).username
-    room = Room.query.get_or_404(room_id)
+    with db.session.begin():
+        user_name = User.query.get(user_id).username
+        room = Room.query.get_or_404(room_id)
+        
+        # 检查房间中的用户
+        user_in_room = False
+        has_online_player = False
+        for seat_num, player_id, player in room.get_players():
+            if player_id:
+                if player.is_online():
+                    has_online_player = True
+                if player_id == user_id:
+                    user_in_room = True
+        
+        # 检查房间状态
+        if not room.active:
+            return jsonify({'status': 'error', 'message': '游戏尚未开始'})
+        
+        if not user_in_room and has_online_player:
+            return jsonify({'status': 'error', 'message': '房间里还有其他玩家，您无法结束游戏'})
+        
+        # 结束游戏
+        room.active = False
     
-    # 检查房间中的用户
-    user_in_room = False
-    has_online_player = False
-    for seat_num, player_id, player in room.get_players():
-        if player_id:
-            if player.is_online():
-                has_online_player = True
-            if player_id == user_id:
-                user_in_room = True
-    
-    # 检查房间状态
-    if not room.active:
-        return jsonify({'status': 'error', 'message': '游戏尚未开始'})
-    
-    if not user_in_room and has_online_player:
-        return jsonify({'status': 'error', 'message': '房间里还有其他玩家，您无法结束游戏'})
-    
-    # 结束游戏
-    room.active = False
+    replay = Replay.query.filter_by(room_id=room.room_id).order_by(Replay.id.desc()).first()
+    replay.end_id = Record.query.order_by(Record.id.desc()).first().id
     db.session.commit()
     send_system_message(room_id, f'{user_name} 结束了游戏')
     
