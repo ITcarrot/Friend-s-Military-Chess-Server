@@ -3,6 +3,12 @@
 {% block title %}观看复盘{% endblock %}
 
 {% block content %}
+<audio id="moveSound" src="/audio/move.mp3" preload="auto"></audio>
+<audio id="40lostSound" src="/audio/40lost.mp3" preload="auto"></audio>
+<audio id="winSound" src="/audio/win.mp3" preload="auto"></audio>
+<audio id="loseSound" src="/audio/lose.mp3" preload="auto"></audio>
+<audio id="drawSound" src="/audio/draw.mp3" preload="auto"></audio>
+
 <div class="row">
     <div class="col-md-4">
         <div class="card mb-4">
@@ -120,6 +126,12 @@ function updateReplay(step) {
         line.setAttribute("stroke-width", "2");
         line.setAttribute("marker-end", "url(#arrowheadB)");
         arrowLayer.append(line);
+    }
+
+    if (board.last_battle_result) {
+        $('#' + board.last_battle_result + 'Sound')[0].play();
+    } else {
+        $('#moveSound')[0].play();
     }
 
     $('#currentStep').text(step);
