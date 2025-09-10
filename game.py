@@ -76,6 +76,7 @@ class ChessBoard:
         chess_pool = copy.copy(ALL_CHESS)
         self.chesses = []
         self.last_move = None # (old_x, old_y, new_x, new_y)
+        self.last_battle_result = None
         cnt = 0
         for i in range(1, num_players + 1):
             offset_x, offset_y = INIT_OFFSET[i - 1]
@@ -90,7 +91,8 @@ class ChessBoard:
     def to_dict(self):
         return {
             'chesses': [chess.to_dict() for chess in self.chesses],
-            'last_move': self.last_move
+            'last_move': self.last_move,
+            'last_battle_result': self.last_battle_result
         }
 
     def jsonify(self):
@@ -102,6 +104,7 @@ class ChessBoard:
         board = cls(0)
         board.chesses = [Chess.from_dict(chess_data) for chess_data in data['chesses']]
         board.last_move = data['last_move']
+        board.last_battle_result = data.get('last_battle_result', None)
         return board
     
     @classmethod

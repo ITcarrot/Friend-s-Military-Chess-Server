@@ -149,7 +149,7 @@ def play_room(room_id):
 @check_login
 def replay_list():
     """对局回放列表页面"""
-    replays = Replay.query.order_by(Replay.id.desc()).all()
+    replays = Replay.query.filter(Replay.end_id != None, Replay.end_id - Replay.start_id > 50).order_by(Replay.id.desc()).all()
     for replay in replays:
         replay.players = ', '.join(json.loads(replay.players))
     return render_template('replay_list.html', replays=replays)
@@ -467,6 +467,7 @@ def get_board(room_id):
         battle['battle_time'] = math.ceil(datetime.now().timestamp() - battle['battle_time'])
     
     return jsonify({
+        'record_id': record.id,
         'status': 'success',
         'board': chess_board.to_dict(),
         'battle': battle
@@ -512,6 +513,7 @@ def move_chess():
         chess.x = new_x
         chess.y = new_y
         chess_board.last_move = (old_x, old_y, new_x, new_y)
+        chess_board.last_battle_result = None
         
         # 保存新的棋盘状态
         new_record = Record(room_id=room_id, board_state=chess_board.jsonify())
@@ -595,11 +597,19 @@ def respond_attack():
             result = attacker.compare(defender)
             if result > 0:
                 defender.alive = False
+                chess_board.last_battle_result = 'win'
             elif result < 0:
                 attacker.alive = False
+                chess_board.last_battle_result = 'lose'
             else:
                 attacker.alive = False
                 defender.alive = False
+                chess_board.last_battle_result = 'draw'
+            
+            if attacker.name == '司' and not attacker.alive:
+                chess_board.last_battle_result = '40lost'
+            if defender.name == '司' and not defender.alive:
+                chess_board.last_battle_result = '40lost'
             
             chess_board.last_move = (attacker.x, attacker.y, defender.x, defender.y)
             if result > 0:
@@ -618,6 +628,13 @@ def serve_image(filename):
     if re.match(r'^[0-9a-zA-Z_-]+\.[a-zA-Z]{3,4}$', filename) is None:
         return "Invalid filename", 400
     return send_from_directory('img/', filename)
+
+@app.route('/audio/<path:filename>')
+def serve_audio(filename):
+    """服务静态音频"""
+    if re.match(r'^[0-9a-zA-Z_-]+\.[a-zA-Z0-9]{3,4}$', filename) is None:
+        return "Invalid filename", 400
+    return send_from_directory('audio/', filename)
 
 if __name__ == '__main__':
     app.run(debug=False)

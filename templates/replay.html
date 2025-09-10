@@ -36,6 +36,7 @@
                     <input type="range" class="form-range" min="1" max="{{ records.__len__() }}" value="1" id="replayRange" oninput="updateReplay(this.value)">
                     <div class="d-flex justify-content-between">
                         <span>1</span>
+                        <span id="currentStep">1</span>
                         <span>{{ records.__len__() }}</span>
                     </div>
                 </div>
@@ -120,6 +121,8 @@ function updateReplay(step) {
         line.setAttribute("marker-end", "url(#arrowheadB)");
         arrowLayer.append(line);
     }
+
+    $('#currentStep').text(step);
 }
 updateReplay(1); // 初始化显示第一步
 

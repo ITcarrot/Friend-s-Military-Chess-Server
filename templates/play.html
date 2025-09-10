@@ -3,6 +3,14 @@
 {% block title %}房间 {{ room_id }} - 军旗棋盘{% endblock %}
 
 {% block content %}
+<audio id="selectSound" src="/audio/select.mp3" preload="auto"></audio>
+<audio id="moveSound" src="/audio/move.mp3" preload="auto"></audio>
+<audio id="attackSound" src="/audio/attack.mp3" preload="auto"></audio>
+<audio id="40lostSound" src="/audio/40lost.mp3" preload="auto"></audio>
+<audio id="winSound" src="/audio/win.mp3" preload="auto"></audio>
+<audio id="loseSound" src="/audio/lose.mp3" preload="auto"></audio>
+<audio id="drawSound" src="/audio/draw.mp3" preload="auto"></audio>
+
 <div class="d-flex justify-content-between mb-4">
     <a href="/" class="btn btn-secondary" onclick="$('.leave-btn').click();">
         <i class="fas fa-arrow-left me-2"></i>返回首页
@@ -283,6 +291,7 @@ function updateBoard(board, battle) {
                     }
                     $(this).addClass("border-3 border-dark");
                     selectedId = cid;
+                    $('#selectSound')[0].play();
                 }
             }else{
                 if (selectedId == null){
@@ -374,6 +383,25 @@ function updateBoard(board, battle) {
             $('#attackPopup').show();
     }
   }
+}
+
+let last_battle_pair = (null, null);
+let last_record_id = null;
+function playSound(battle, record_id, battle_result) {
+    battle_pair = [battle ? battle.attacker : null, battle ? battle.defender : null];
+    if (battle && (battle_pair[0] != last_battle_pair[0] || battle_pair[1] != last_battle_pair[1])) {
+        $('#attackSound')[0].play();
+    }
+    last_battle_pair = battle_pair;
+
+    if (record_id != last_record_id) {
+        if (battle_result) {
+            $('#' + battle_result + 'Sound')[0].play();
+        } else {
+            $('#moveSound')[0].play();
+        }
+        last_record_id = record_id;
+    }
 }
 
 // 获取聊天消息
@@ -624,6 +652,7 @@ setInterval(() => {
         $.getJSON(`/api/board/${roomId}`, function(res) {
             if (res.status === "success") {
                 updateBoard(res.board, res.battle);
+                playSound(res.battle, res.record_id, res.board.last_battle_result);
             }
         });
     }else{
