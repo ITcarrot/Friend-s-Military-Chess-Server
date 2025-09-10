@@ -210,9 +210,6 @@ def take_seat(room_id, seat_num):
     user_id = request.cookies.get('user_id')
     room = Room.query.get_or_404(room_id)
     
-    if room.active:
-        return jsonify({'status': 'error', 'message': '游戏进行中，无法调整座位'})
-    
     # 检查座位是否可用
     if seat_num < 1 or seat_num > room.room_type:
         return jsonify({'status': 'error', 'message': '无效的座位号'})
