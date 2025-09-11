@@ -103,6 +103,25 @@ def db_init(app):
                 'is_system': self.is_system
             }
     
+    global Emoji
+    class Emoji(db.Model):
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        room_id = db.Column(db.Integer, nullable=False)
+        team_id = db.Column(db.Integer, nullable=False)
+        emoji = db.Column(db.Integer, nullable=False)
+        x = db.Column(db.Float, nullable=False)
+        y = db.Column(db.Float, nullable=False)
+        timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
+        
+        def to_dict(self):
+            """转换为字典格式"""
+            return {
+                'team_id': self.team_id,
+                'emoji': self.emoji,
+                'x': self.x,
+                'y': self.y
+            }
+    
     global Record
     class Record(db.Model):
         id = db.Column(db.Integer, primary_key=True, autoincrement=True)

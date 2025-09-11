@@ -102,6 +102,22 @@
         #chatWindow .float-end {
             font-size: 0.75rem;
         }
+
+        @keyframes zoomInOut {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .emoji {
+            animation: zoomInOut 0.3s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>

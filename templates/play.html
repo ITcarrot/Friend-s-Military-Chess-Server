@@ -101,7 +101,8 @@
                     清空标记</button>
             </div>
             <div class="card-body">
-                <div class="text-center my-4" style="height: 1000px; position: relative;" id="boardContainer">
+                <span class="text-muted">提示：点击棋盘空白处可发送表情</span>
+                <div class="text-center mb-4" style="height: 1000px; position: relative;" id="boardContainer">
                     <img id="board-img" src="" alt="军旗棋盘" class="img-fluid" style="max-height: 100%; max-width: 100%;">
                     <svg id="arrowLayer" width="100%" height="100%" 
                         style="position:absolute; top:0; left:0; pointer-events:none; z-index:20;">
@@ -135,6 +136,21 @@
                             {% endfor %}
                         </div>
                     </div>
+                    <div id="emojiPopup" class="card shadow-sm p-2"
+                        style="position:absolute; z-index:999; width:360px; text-align:center; display:none;">
+                        <div class="d-flex justify-content-center flex-wrap">
+                            {% for i in range(1, 5) %}
+                            <div class="m-1" 
+                                style="width:60px; height:60px; cursor: pointer;" 
+                                onclick="sendEmoji({{ i }});">
+                                <img src="/img/emoji{{ i }}.png" alt="emoji" style="width:100%; height:100%;">
+                            </div>
+                            {% endfor %}
+                            <div class="m-1 rounded-circle border" 
+                                style="width:60px; height:60px; cursor: pointer;" onclick="$('#emojiPopup').hide();">
+                                <span style="line-height:60px; font-weight:bold; font-size: 30px">X</span>
+                            </div>
+                        </div>
                 </div>
             </div>
         </div>
@@ -446,6 +462,26 @@ function updateChatMessages() {
                 last_msg_timestamp = new_last_msg_timestamp;
                 $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
             }
+
+            // 显示emoji表情
+            const container = $("#boardContainer");
+            container.find("img.emoji").remove();
+            data.emojis.forEach(emoji => {
+                const img = $('<img>').addClass('emoji').attr('src', '/img/emoji' + emoji.emoji + '.png').css({
+                    left: emoji.x,
+                    top: emoji.y,
+                    position: 'absolute',
+                    width: '60px',
+                    height: '60px'
+                });
+                img.css({
+                    border: '2px solid ' + colors[emoji.team_id],
+                    borderRadius: '12px',
+                    boxSizing: 'border-box',
+                });
+                console.log(img);
+                container.append(img);
+            });
         }
     });
 }
@@ -472,6 +508,30 @@ function sendChatMessage() {
             }
         });
     }
+}
+
+function sendEmoji(id)
+{
+    pos = $('#emojiPopup').position();
+    const x = pos.left + 180;
+    const y = pos.top + 42;
+    $.ajax({
+        url: '/api/emoji/send',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            'room_id': roomId,
+            'emoji_id': id,
+            'x': x - 30,
+            'y': y - 30
+        }),
+        success: function(response) {
+            if (response.status !== 'success') {
+                alert('发送Emoji失败: ' + response.message);
+            }
+        }
+    });
+    $('#emojiPopup').hide();
 }
 
 function tagChess(tag) {
@@ -575,9 +635,32 @@ $('#EndGameBtn').click(function() {
     }
 });
 
+// 防止弹窗穿透
+$('#tagPopup, #emojiPopup, #attackPopup').click(function(e) {
+    e.stopPropagation();
+});
 // 棋盘点击：移动己方选中棋子
 $("#boardContainer").on("click", function(e) {
-    if (selectedId === null) return;
+    if($('#emojiPopup').is(':visible')){
+        $('#emojiPopup').hide();
+        return;
+    }
+    if ($('#tagPopup').is(':visible')) {
+        $('#tagPopup').hide();
+        selectedForTag = null;
+        return;
+    }
+
+    if (selectedId === null) {
+        // 没有选中棋子，显示表情选择
+        if (userSeat > 0) {
+            $('#emojiPopup').css({
+                left: (e.pageX - $(this).offset().left - 180) + "px",
+                top:  (e.pageY - $(this).offset().top - 42) + "px"
+            }).show();
+        }
+        return;
+    }
 
     const offset = $(this).offset();
     let x = e.pageX - offset.left - 20;
@@ -691,6 +774,7 @@ setInterval(() => {
         // 清除棋盘
         Object.values(chessMap).forEach(el => el.remove());
         chessMap = {};
+        selectedId = null;
         $("#arrowLayer").find("line").remove();
     }
 }, 500);

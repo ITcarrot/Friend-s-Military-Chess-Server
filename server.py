@@ -397,6 +397,37 @@ def stop_game(room_id):
     
     return jsonify({'status': 'success'})
 
+@app.route('/api/emoji/send', methods=['POST'])
+@check_login
+def send_emoji():
+    """发送表情API"""
+    user_id = request.cookies.get('user_id')
+    room_id = request.json.get('room_id')
+    emoji_id = request.json.get('emoji_id')
+    x = request.json.get('x')
+    y = request.json.get('y')
+    
+    if not emoji_id or not room_id:
+        return jsonify({'status': 'error', 'message': '表情ID或房间ID不能为空'})
+    
+    room = Room.query.get_or_404(room_id)
+    user_team = room.get_player_team(user_id)
+    
+    if user_team == 0:
+        return jsonify({'status': 'error', 'message': '您不在游戏中，无法发送表情'})
+    
+    # 创建表情记录
+    emoji = Emoji(
+        room_id=room_id,
+        team_id=user_team,
+        emoji=emoji_id,
+        x=x, y=y
+    )
+    db.session.add(emoji)
+    db.session.commit()
+    
+    return jsonify({'status': 'success'})
+
 @app.route('/api/chat/send', methods=['POST'])
 @check_login
 def send_chat_message():
@@ -428,10 +459,13 @@ def get_chat_messages(room_id):
     # 获取最近50条消息
     messages = Message.query.filter_by(room_id=room_id).order_by(Message.timestamp.desc()).limit(50).all()
     messages.reverse()  # 反转顺序，使最早的消息在前
+    # 获取最近2秒的表情
+    recent_emojis = Emoji.query.filter_by(room_id=room_id).filter(Emoji.timestamp >= datetime.now() - timedelta(seconds=2)).all()
     
     return jsonify({
         'status': 'success',
-        'messages': [msg.to_dict() for msg in messages]
+        'messages': [msg.to_dict() for msg in messages],
+        'emojis': [emoji.to_dict() for emoji in recent_emojis]
     })
 
 @app.route('/api/board/<int:room_id>')
