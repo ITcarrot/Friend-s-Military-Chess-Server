@@ -110,3 +110,75 @@ class ChessBoard:
     @classmethod
     def to_team_idx(cls, chess_id):
         return (chess_id // len(ALL_CHESS)) + 1
+
+    def calculate_adjusted_position(self, original_x, original_y, target_x, target_y, new_x, new_y):
+        """基于移动棋子和目标棋子的中心连线计算弹出位置
+        
+        Args:
+            original_x, original_y: 移动棋子的原始位置
+            target_x, target_y: 目标棋子的位置
+            new_x, new_y: 移动的目标位置
+            
+        Returns:
+            tuple: 调整后的位置 (adjusted_x, adjusted_y)
+        """
+        # 计算移动棋子和目标棋子的中心坐标
+        moving_center_x = original_x + 20
+        moving_center_y = original_y + 20
+        target_center_x = target_x + 20
+        target_center_y = target_y + 20
+        
+        # 计算移动方向向量
+        dx = target_center_x - moving_center_x
+        dy = target_center_y - moving_center_y
+        
+        # 计算方向向量的长度
+        length = math.sqrt(dx**2 + dy**2)
+        
+        if length == 0:
+            # 如果长度为零（罕见情况），返回原始位置
+            return new_x, new_y
+        
+        # 归一化方向向量
+        dx /= length
+        dy /= length
+        
+        # 沿着移动方向延长40像素（棋子半径20 + 目标棋子半径20）
+        adjusted_center_x = target_center_x + dx * 40
+        adjusted_center_y = target_center_y + dy * 40
+        
+        # 将中心坐标转换回棋子左上角坐标
+        adjusted_x = adjusted_center_x - 20
+        adjusted_y = adjusted_center_y - 20
+        
+        return adjusted_x, adjusted_y
+
+    def is_position_valid(self, x, y, exclude_chess_id):
+        """检查位置是否有效且不与其他棋子重叠
+        
+        Args:
+            x: 要检查的x坐标
+            y: 要检查的y坐标
+            exclude_chess_id: 要排除的棋子ID
+            
+        Returns:
+            bool: 如果位置有效且不重叠返回True，否则返回False
+        """
+        # 检查边界（棋盘范围大致为0-1000像素）
+        if x < 0 or x > 1000 or y < 0 or y > 1000:
+            return False
+        
+        # 检查是否与其他棋子重叠（基于中心距离）
+        for chess in self.chesses:
+            if chess.id == exclude_chess_id or not chess.alive:
+                continue
+            
+            # 计算中心点距离
+            center_x1, center_y1 = x + 20, y + 20
+            center_x2, center_y2 = chess.x + 20, chess.y + 20
+            distance = math.sqrt((center_x1 - center_x2)**2 + (center_y1 - center_y2)**2)
+            
+            if distance < 40:  # 中心距离小于40像素表示重叠
+                return False
+        
+        return True

@@ -505,6 +505,38 @@ def move_chess():
         if chess.team != user_team:
             return jsonify({'status': 'error', 'message': '您无权移动此棋子'})
         
+        # 检查目标位置是否被其他棋子占用，并提供智能弹出功能
+        overlapping_chess = None
+        for other_chess in chess_board.chesses:
+            # 跳过当前棋子和已经死亡的棋子
+            if other_chess.id == chess_id or not other_chess.alive:
+                continue
+            
+            # 计算中心点距离（棋子中心坐标为x+20, y+20）
+            center_x1, center_y1 = new_x + 20, new_y + 20
+            center_x2, center_y2 = other_chess.x + 20, other_chess.y + 20
+            distance = math.sqrt((center_x1 - center_x2)**2 + (center_y1 - center_y2)**2)
+            
+            # 如果中心距离小于40像素，说明重叠
+            if distance < 40:
+                overlapping_chess = other_chess
+                break
+        
+        if overlapping_chess:
+            # 基于移动棋子和目标棋子的中心连线计算弹出位置
+            adjusted_x, adjusted_y = chess_board.calculate_adjusted_position(
+                chess.x, chess.y,  # 移动棋子的原始位置
+                overlapping_chess.x, overlapping_chess.y,  # 目标棋子的位置
+                new_x, new_y  # 移动的目标位置
+            )
+            
+            # 检查调整后的位置是否有效
+            if chess_board.is_position_valid(adjusted_x, adjusted_y, chess_id):
+                new_x, new_y = adjusted_x, adjusted_y
+            else:
+                # 如果无法找到合适位置，返回错误
+                return jsonify({'status': 'error', 'message': '目标位置已被其他棋子占用且无法调整'})
+        
         # 更新棋子位置
         old_x, old_y = chess.x, chess.y
         chess.x = new_x
