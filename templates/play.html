@@ -145,14 +145,17 @@
 {% block extra_js %}
 <script>
 let colors = {{ colors | tojson }};
+let positions = {{ positions | tojson }};
 let userId = "{{ user_id }}";
 let roomId = {{ room_id }};
+let roomType = {{ room.room_type }};
 let userSeat = 0;
 let isActive = {{ 'true' if room.active else 'false' }};
 
 // 更新房间状态
 function updateRoomStatus() {
     $.getJSON(`/api/room_status/${roomId}`, function(data) {
+        roomType = data.room_type;
         isActive = data.status;
 
         // 更新房间状态
@@ -577,8 +580,33 @@ $("#boardContainer").on("click", function(e) {
     if (selectedId === null) return;
 
     const offset = $(this).offset();
-    const x = e.pageX - offset.left - 20;
-    const y = e.pageY - offset.top - 20;
+    let x = e.pageX - offset.left - 20;
+    let y = e.pageY - offset.top - 20;
+
+    // 找到最近的9个可用点，按距离排序
+    const pool = positions[roomType];
+    let nearest = pool.map(pos => {
+        return {
+            pos: pos,
+            dist: Math.hypot(pos[0] - x, pos[1] - y)
+        };
+    });
+    nearest.sort((a, b) => a.dist - b.dist);
+    nearest = nearest.slice(0, 9);
+    // 从最近的9个点中选择一个未被占用的点
+    for (let item of nearest) 
+        if (item.dist < 40) { // 至少距离40像素以内
+            const occupied = Object.values(chessMap).some(el => {
+                const elX = parseInt(el.css("left"));
+                const elY = parseInt(el.css("top"));
+                return Math.hypot(elX - item.pos[0], elY - item.pos[1]) < 20; // 20像素内视为占用
+            });
+            if (!occupied) {
+                x = item.pos[0];
+                y = item.pos[1];
+                break;
+            }
+        }
 
     // 这里你可能要发请求给后端 API 告诉服务器移动动作
     $.ajax({

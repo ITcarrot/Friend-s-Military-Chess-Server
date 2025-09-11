@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, make_response, jsonify, send_from_directory
 from datetime import datetime
-import hashlib, uuid, re, math, json
+import hashlib, uuid, re, math, json, pickle
 from game import *
 
 import logging
@@ -143,7 +143,7 @@ def play_room(room_id):
     room = Room.query.get_or_404(room_id)
     
     return render_template('play.html', room_id=room_id, username=username, 
-                          user_id=user_id, room=room, colors=COLORS)
+                          user_id=user_id, room=room, colors=COLORS, positions=pickle.load(open('positions.pkl', 'rb')))
 
 @app.route('/replay_list')
 @check_login
