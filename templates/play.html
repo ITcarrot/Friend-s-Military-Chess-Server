@@ -479,7 +479,6 @@ function updateChatMessages() {
                     borderRadius: '12px',
                     boxSizing: 'border-box',
                 });
-                console.log(img);
                 container.append(img);
             });
         }
@@ -682,7 +681,7 @@ $("#boardContainer").on("click", function(e) {
             const occupied = Object.values(chessMap).some(el => {
                 const elX = parseInt(el.css("left"));
                 const elY = parseInt(el.css("top"));
-                return Math.hypot(elX - item.pos[0], elY - item.pos[1]) < 20; // 20像素内视为占用
+                return el.is(":visible") && Math.hypot(elX - item.pos[0], elY - item.pos[1]) < 20; // 20像素内视为占用
             });
             if (!occupied) {
                 x = item.pos[0];
