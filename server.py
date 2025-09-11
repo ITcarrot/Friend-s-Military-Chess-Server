@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, make_response, jsonify, send_from_directory
+from flask_compress import Compress
 from datetime import datetime
 import hashlib, uuid, re, math, json, pickle
 from game import *
@@ -7,6 +8,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG, filename='server.log', filemode='a')
 
 app = Flask(__name__)
+Compress(app)
 from db_tables import db_init
 db_init(app)
 from db_tables import *
