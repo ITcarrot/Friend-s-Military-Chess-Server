@@ -359,7 +359,8 @@ def start_game(room_id):
     
     send_system_message(room_id, f'{user_name} 开始了游戏')
     
-    return jsonify({'status': 'success'})
+    # 返回成功状态并指示需要清除标记
+    return jsonify({'status': 'success', 'clear_tags': True})
 
 @app.route('/api/stop_game/<int:room_id>', methods=['POST'])
 @check_login

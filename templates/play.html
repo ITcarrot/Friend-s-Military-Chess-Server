@@ -553,6 +553,10 @@ $('#startGameBtn').click(function() {
     $.post(`/api/start_game/${roomId}`, function(response) {
         if (response.status === 'success') {
             updateRoomStatus();
+            // 如果服务器指示需要清除标记，则清除当前房间的标记
+            if (response.clear_tags) {
+                $.cookie(`tags_${roomId}`, '', { path: '/' });
+            }
         } else {
             alert(response.message);
         }
