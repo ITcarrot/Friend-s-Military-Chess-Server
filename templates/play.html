@@ -65,17 +65,14 @@
         <div id="userSeatInfo" class="alert alert-info mt-3">
             <!-- 用户座位信息将通过JavaScript动态更新 -->
         </div>
-    </div>
-    
-    <!-- 右侧：聊天和棋盘 -->
-    <div class="col-md-8">
+        
         <!-- 聊天窗口 -->
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-comments me-2"></i>聊天窗口</h5>
             </div>
             <div class="card-body p-0">
-                <div id="chatWindow" style="height: 200px; overflow-y: auto; padding: 10px;">
+                <div class="chatWindow" id="chatWindow" style="height: 200px; overflow-y: auto; padding: 10px;">
                     <!-- 聊天消息将通过JavaScript动态更新 -->
                     <div class="text-center py-4">
                         <div class="spinner-border text-primary" role="status">
@@ -93,7 +90,10 @@
                 </div>
             </div>
         </div>
-        <!-- 棋盘区域 -->
+    </div>
+    
+    <!-- 棋盘区域 -->
+    <div class="col-md-8">
         <div class="card" style="width: 1032px;">
             <div class="card-header">
                 <h3 class="mb-0"><i class="fas fa-chess-rook me-2"></i>军旗棋盘 - 房间 {{ room_id }}</h3>
@@ -151,6 +151,11 @@
                                 <span style="line-height:60px; font-weight:bold; font-size: 30px">X</span>
                             </div>
                         </div>
+                    </div>
+                    <div id="chatPopup" class="card shadow-sm p-2 chatWindow"
+                        style="position:absolute; z-index:1000; width:400px; top: 300px; left: 300px;
+                            text-align:left; opacity: 0.5; display:none;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -463,6 +468,33 @@ function updateChatMessages() {
                 $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
             }
 
+            // 在弹窗显示最近5秒的消息
+            const now = new Date();
+            const messagesForPopup = data.messages.filter(msg => {
+                // msg.timestamp 形如 "06-14 12:34:56"
+                // 需要补全年份
+                const currentYear = now.getFullYear();
+                const msgTimeStr = currentYear + '-' + msg.timestamp; // "2024-06-14 12:34:56"
+                const msgTime = new Date(msgTimeStr);
+                return (now - msgTime) / 1000 <= 5;
+            });
+            const messagesContainer = $('#chatPopup');
+
+            // 显示最近10秒的消息
+            messagesContainer.empty();
+            messagesForPopup.forEach(msg => {
+                messagesContainer.append(`
+                    <div class="mb-2">
+                        <strong>${msg.sender}:</strong> ${msg.content}
+                        <small class="text-muted float-end">${msg.timestamp}</small>
+                    </div>
+                `);
+            });
+            if(messagesForPopup.length > 0)
+                messagesContainer.show();
+            else
+                messagesContainer.hide();
+            
             // 显示emoji表情
             const container = $("#boardContainer");
             container.find("img.emoji").remove();
