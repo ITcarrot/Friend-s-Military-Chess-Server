@@ -100,6 +100,7 @@ def db_init(app):
                 'sender': self.sender,
                 'content': self.content,
                 'timestamp': self.timestamp.strftime('%m-%d %H:%M:%S'),
+                'is_recent': (datetime.now() - self.timestamp <= timedelta(seconds=5)),
                 'is_system': self.is_system
             }
     

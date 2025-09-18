@@ -499,18 +499,10 @@ function updateChatMessages() {
             }
 
             // 在弹窗显示最近5秒的消息
-            const now = new Date();
-            const messagesForPopup = data.messages.filter(msg => {
-                // msg.timestamp 形如 "06-14 12:34:56"
-                // 需要补全年份
-                const currentYear = now.getFullYear();
-                const msgTimeStr = currentYear + '-' + msg.timestamp; // "2024-06-14 12:34:56"
-                const msgTime = new Date(msgTimeStr);
-                return (now - msgTime) / 1000 <= 5;
-            });
+            const messagesForPopup = data.messages.filter(msg => { return msg.is_recent; });
             const messagesContainer = $('#chatPopup');
 
-            // 显示最近10秒的消息
+            // 显示最近5秒的消息
             messagesContainer.empty();
             messagesForPopup.forEach(msg => {
                 messagesContainer.append(`
