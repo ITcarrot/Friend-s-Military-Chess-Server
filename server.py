@@ -168,6 +168,13 @@ def replay_view(replay_id):
     return render_template('replay.html', room_type=len(players), \
         players=enumerate(players), records=[r.board_state for r in records], colors=COLORS)
 
+@app.route('/formation')
+@check_login
+def formation():
+    """布阵页面"""
+    return_url = request.args.get('ret', '/')
+    return render_template('formation.html', return_url=return_url)
+
 @app.route('/api/update_last_login', methods=['POST'])
 @check_login
 def update_last_login():
@@ -505,6 +512,55 @@ def get_board(room_id):
         'board': chess_board.to_dict(),
         'battle': battle
     })
+
+@app.route('/api/set_formation', methods=['POST'])
+@check_login
+def set_formation():
+    """设置阵型API"""
+    user_id = request.cookies.get('user_id')
+    room_id = request.json.get('room_id')
+    formation = request.json.get('formation')  # 阵型列表
+    positions = request.json.get('positions')  # 位置列表
+    
+    if None in [room_id, formation, positions] or len(formation) != 30 or len(positions) != 30:
+        return jsonify({'status': 'error', 'message': '参数不完整或格式错误'})
+    
+    with db.session.begin():
+        room = Room.query.get_or_404(room_id)
+        
+        if not room.active:
+            return jsonify({'status': 'error', 'message': '游戏尚未开始，无法布阵'})
+        
+        user_team = room.get_player_team(user_id)
+        if user_team == 0:
+            return jsonify({'status': 'error', 'message': '您不在游戏中，无法布阵'})
+        
+        record = Record.query.filter_by(room_id=room_id).order_by(Record.id.desc()).first()
+        if not record:
+            return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
+        
+        chess_board = ChessBoard.from_json(record.board_state)
+        
+        # 获取该队伍的棋子
+        chess_by_name = {}
+        for chess in chess_board.chesses:
+            if chess.team == user_team and chess.alive:
+                chess_by_name.setdefault(chess.name, []).append(chess)
+        
+        # 重置该队伍的棋子位置
+        for idx, name in enumerate(formation):
+            if name and name in chess_by_name and chess_by_name[name]:
+                chess = chess_by_name[name].pop()
+                chess.x, chess.y = positions[idx]
+            elif name != "":
+                return jsonify({'status': 'error', 'message': f'棋子 {name} 数量不足'})
+        
+        chess_board.last_move = None
+        chess_board.last_battle_result = None
+        record = Record(room_id=room.room_id, board_state=chess_board.jsonify())
+        db.session.add(record)
+    
+    return jsonify({'status': 'success'})
 
 @app.route('/api/move_chess', methods=['POST'])
 @check_login
