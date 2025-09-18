@@ -151,10 +151,14 @@ def play_room(room_id):
 @check_login
 def replay_list():
     """对局回放列表页面"""
-    replays = Replay.query.filter(Replay.end_id != None, Replay.end_id - Replay.start_id > 50).order_by(Replay.id.desc()).all()
+    show_all = request.args.get('all', '0')
+    if show_all == '1':
+        replays = Replay.query.filter(Replay.end_id != None).order_by(Replay.id.desc()).all()
+    else:
+        replays = Replay.query.filter(Replay.end_id != None, Replay.end_id - Replay.start_id > 50).order_by(Replay.id.desc()).all()
     for replay in replays:
         replay.players = ', '.join(json.loads(replay.players))
-    return render_template('replay_list.html', replays=replays)
+    return render_template('replay_list.html', replays=replays, show_all=show_all)
 
 @app.route('/replay/<int:replay_id>')
 @check_login

@@ -16,8 +16,16 @@
             <h4 class="mb-0 text-center flex-grow-1">
                 <i class="fas fa-history me-2"></i> 对局回放列表
             </h4>
-            <!-- 右侧占位（保持居中效果） -->
-            <div style="width:145px;"></div>
+            {% if show_all != '1' %}
+                <div>
+                    <a href="?all=1" class="btn btn-secondary btn-md">
+                        查看过短的回放
+                    </a>
+                </div>
+            {% else %}
+                <!-- 右侧占位（保持居中效果） -->
+                <div style="width:145px;"></div>
+            {% endif %}
         </div>
         <div class="card-body p-4">
             {% if replays %}
