@@ -559,6 +559,22 @@ function sendEmoji(id)
         success: function(response) {
             if (response.status !== 'success') {
                 alert('发送Emoji失败: ' + response.message);
+            } else {
+                // 直接显示刚发送的emoji表情
+                const container = $("#boardContainer");
+                const img = $('<img>').addClass('emoji').attr('src', '/img/emoji' + id + '.png').css({
+                    left: x - 30,
+                    top: y - 30,
+                    position: 'absolute',
+                    width: '60px',
+                    height: '60px'
+                });
+                img.css({
+                    border: '2px solid ' + colors[userSeat],
+                    borderRadius: '12px',
+                    boxSizing: 'border-box',
+                });
+                container.append(img);
             }
         }
     });
@@ -723,6 +739,7 @@ $("#boardContainer").on("click", function(e) {
         }
 
     // 这里你可能要发请求给后端 API 告诉服务器移动动作
+    const [old_x, old_y] = [chessMap[selectedId].position().left, chessMap[selectedId].position().top];
     $.ajax({
         url: '/api/move_chess',
         type: 'POST',
@@ -736,6 +753,17 @@ $("#boardContainer").on("click", function(e) {
         success: function(response) {
             if (response.status !== 'success') {
                 alert('移动失败: ' + response.message);
+            } else {
+                // 先弄出箭头
+                let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", old_x + 20); // 棋子中心
+                line.setAttribute("y1", old_y + 20);
+                line.setAttribute("x2", x + 20);
+                line.setAttribute("y2", y + 20);
+                line.setAttribute("stroke", "black");
+                line.setAttribute("stroke-width", "2");
+                line.setAttribute("marker-end", "url(#arrowheadB)");
+                arrowLayer.append(line);
             }
         }
     });
