@@ -15,7 +15,10 @@ ALL_CHESS = [
   '旗'     # 军旗 x1
 ]
 
-INIT_OFFSET = [(0, 0), (800, 800), (0, 800), (800, 0), (0, 400), (800, 400), (400, 0), (400, 800)]
+INIT_OFFSET = {2: [(0, 0), (800, 800)],
+               4: [(0, 0), (800, 800), (0, 800), (800, 0)],
+               6: [(0, 0), (800, 800), (0, 800), (800, 0), (0, 400), (800, 400)],
+               8: [(0, 0), (800, 800), (0, 800), (800, 0), (200, 400), (600, 400), (400, 200), (400, 600)]}
 
 class Chess:
     def __init__(self, id, team, name, x, y, alive):
@@ -79,7 +82,7 @@ class ChessBoard:
         self.last_battle_result = None
         cnt = 0
         for i in range(1, num_players + 1):
-            offset_x, offset_y = INIT_OFFSET[i - 1]
+            offset_x, offset_y = INIT_OFFSET[num_players][i - 1]
             random.shuffle(chess_pool)
             for j, name in enumerate(chess_pool):
                 x = (j % 5) * 40 + offset_x
