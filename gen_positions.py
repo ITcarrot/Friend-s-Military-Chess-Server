@@ -51,9 +51,9 @@ center = (482, 493)
 positions[6] = gen_all(player, extra, center, 60)
 
 # 8人初始位置
-player = gen(list(range(381, 381 + 5 * 49, 49)), (list(range(764, 764 + 6 * 37, 37))))
-extra = [(381, 716), (439, 576), (480, 617)]
-center = (480, 478)
+player = gen(list(range(381, 381 + 5 * 51, 51)), (list(range(772, 772 + 6 * 38, 38))))
+extra = [(381, 721), (484, 578), (484, 621)]
+center = (484, 477)
 positions[8] = gen_all(player, extra, center, 45)
 
 pickle.dump(positions, open('positions.pkl', 'wb'))
