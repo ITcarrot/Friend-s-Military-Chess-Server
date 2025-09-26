@@ -735,4 +735,4 @@ def serve_audio(filename):
     return send_from_directory('audio/', filename)
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)

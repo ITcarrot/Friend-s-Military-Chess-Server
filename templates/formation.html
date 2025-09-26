@@ -31,7 +31,14 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">布阵区</h5>
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1 text-center">
+                        <h5 class="mb-0">布阵区</h5>
+                    </div>
+                    <button class="btn btn-sm btn-success ms-auto" onclick="randomFormation();" title="随机生成阵型">
+                        <i class="fas fa-random me-1"></i>随机生成
+                    </button>
+                </div>
             </div>
             <div class="card-body" style="min-height: 380px;">
                 <div id="matrix" class="d-flex flex-column">
@@ -56,6 +63,7 @@ const defaultFormation = [
 ];
 const ROWS = 6, COLS = 5;
 const forbiddenPoints = [[1,1],[1,3],[2,2],[3,1],[3,3]];
+const flagPoints = [[5,1],[5,3]];
 function saveFormations() {
     $.cookie('formations', JSON.stringify(formations), {expires:365, path:'/'});
 }
@@ -170,5 +178,36 @@ function refresh() {
     renderMatrix();
 }
 refresh();
+function randomFormation() {
+    if(selectedIdx == -1) return;
+    let pieces = defaultFormation.filter(p=>p && p !== '旗' && p !== '雷' && p !== '弹');
+    formations[selectedIdx].matrix.fill('');
+    let [r,c] = flagPoints[Math.floor(Math.random()*flagPoints.length)];
+    formations[selectedIdx].matrix[c*ROWS+r] = '旗';
+    for(let i=0;i<3;){
+        let [r,c] = [Math.floor(Math.random()*2)+4, Math.floor(Math.random()*COLS)];
+        if(formations[selectedIdx].matrix[c*ROWS+r] !== '') continue;
+        formations[selectedIdx].matrix[c*ROWS+r] = '雷';
+        i++;
+    }
+    for(let i=0;i<2;){
+        let [r,c] = [Math.floor(Math.random()*5)+1, Math.floor(Math.random()*COLS)];
+        if(formations[selectedIdx].matrix[c*ROWS+r] !== '') continue;
+        if(forbiddenPoints.some(([fr,fc])=>fr===r&&fc===c)) continue;
+        formations[selectedIdx].matrix[c*ROWS+r] = '弹';
+        i++;
+    }
+    pieces = pieces.sort(()=>Math.random()-0.5);
+    let idx = 0;
+    for(let r=0;r<ROWS;r++){
+        for(let c=0;c<COLS;c++){
+            if(formations[selectedIdx].matrix[c*ROWS+r] !== '') continue;
+            if(forbiddenPoints.some(([fr,fc])=>fr===r&&fc===c)) continue;
+            formations[selectedIdx].matrix[c*ROWS+r] = pieces[idx++];
+        }
+    }
+    saveFormations();
+    refresh();
+}
 </script>
 {% endblock %}
