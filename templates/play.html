@@ -97,6 +97,9 @@
         <div class="card" style="width: 1032px;">
             <div class="card-header">
                 <h3 class="mb-0"><i class="fas fa-chess-rook me-2"></i>军旗棋盘 - 房间 {{ room_id }}</h3>
+                <button class="btn btn-md btn-success" id="tagFirstRow" style="position: absolute; right:120px; top:20px;">
+                    标记首行
+                </button>
                 <button class="btn btn-md btn-danger" id="clearTagBtn" style="position: absolute; right:20px; top:20px;">
                     清空标记</button>
             </div>
@@ -823,6 +826,27 @@ $('#chatInput').keypress(function(e) {
         sendChatMessage();
         return false; // 阻止默认行为
     }
+});
+
+$('#tagFirstRow').click(function() {
+    let tags = $.cookie(`tags_${roomId}`) || '{}';
+    tags = JSON.parse(tags);
+    const pool = positions[roomType];
+    for (let i = 0; i < 30 * roomType; i += 6) {
+        const pos = pool[i];
+        // 找到该位置的棋子
+        const chessId = Object.keys(chessMap).find(id => {
+            const el = chessMap[id];
+            const elX = parseInt(el.css("left"));
+            const elY = parseInt(el.css("top"));
+            return el.is(":visible") && Math.hypot(elX - pos[0], elY - pos[1]) < 20; // 20像素内视为同一位置
+        });
+        if (chessId && !tags[chessId]) {
+            // 标记首行
+            tags[chessId] = '!';
+        }
+    }
+    $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
 });
 
 $('#clearTagBtn').click(function() {
