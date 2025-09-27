@@ -307,7 +307,7 @@ let selectedForTag = null;
 function updateBoard(board, battle) {
   const container = $("#boardContainer");
   const arrowLayer = $("#arrowLayer");
-  let tags = $.cookie(`tags_${roomId}`) || '{}';
+  let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
   tags = JSON.parse(tags);
 
   // 更新棋子
@@ -469,10 +469,10 @@ function playSound(battle, record_id, battle_result) {
                 guessWinner = chessOrder[chessOrder.indexOf(loser) - 1];
             }
             if (winner == '' || winner == '!' || chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner)) {
-                let tags = $.cookie(`tags_${roomId}`) || '{}';
+                let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
                 tags = JSON.parse(tags);
                 tags[battle_result[1]] = guessWinner;
-                $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
+                localStorage.setItem(`tags_${roomId}`, JSON.stringify(tags));
             }
         }
         last_record_id = record_id;
@@ -623,10 +623,10 @@ function sendEmoji(id)
 function tagChess(tag) {
     if (tag === 'X') tag = '';
     if(selectedForTag !== null){
-        tags = $.cookie(`tags_${roomId}`) || '{}';
+        tags = localStorage.getItem(`tags_${roomId}`) || '{}';
         tags = JSON.parse(tags);
         tags[selectedForTag] = tag;
-        $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
+        localStorage.setItem(`tags_${roomId}`, JSON.stringify(tags));
         selectedForTag = null;
         $('#tagPopup').hide();
     }
@@ -844,7 +844,7 @@ $('#chatInput').keypress(function(e) {
 });
 
 $('#tagFirstRow').click(function() {
-    let tags = $.cookie(`tags_${roomId}`) || '{}';
+    let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
     tags = JSON.parse(tags);
     const pool = positions[roomType];
     for (let i = 0; i < 30 * roomType; i += 6) {
@@ -861,11 +861,11 @@ $('#tagFirstRow').click(function() {
             tags[chessId] = '!';
         }
     }
-    $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
+    localStorage.setItem(`tags_${roomId}`, JSON.stringify(tags));
 });
 
 $('#clearTagBtn').click(function() {
-    $.cookie(`tags_${roomId}`, '', { path: '/' });
+    localStorage.removeItem(`tags_${roomId}`);
 });
 
 // 定时更新房间状态和用户最后登录时间
@@ -937,7 +937,7 @@ function renderFormationPreview()
         $('#setFormationBtn').prop('disabled', true);
         return;
     }
-    let formations = $.cookie('formations') || '[]';
+    let formations = localStorage.getItem('formations') || '[]';
     formations = JSON.parse(formations);
     const formation = formations[idx].matrix;
     $('#setFormationBtn').prop('disabled', false);
@@ -966,7 +966,7 @@ function renderFormationPreview()
 }
 let lastFormationsStr = '';
 $('#formationSelect').on('focus', function() {
-    let formationsStr = $.cookie('formations') || '[]';
+    let formationsStr = localStorage.getItem('formations') || '[]';
     if (formationsStr === lastFormationsStr) return; // 没有变化不刷新
     lastFormationsStr = formationsStr;
     const select = $(this);
@@ -1001,7 +1001,7 @@ $('#setFormationBtn').click(function() {
 
     const select = $('#formationSelect');
     const idx = parseInt(select.val());
-    let formations = $.cookie('formations') || '[]';
+    let formations = localStorage.getItem('formations') || '[]';
     formations = JSON.parse(formations);
     const formation = formations[idx].matrix;
 

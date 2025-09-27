@@ -52,7 +52,7 @@
 
 {% block extra_js %}
 <script>
-let formations = $.cookie('formations') ? JSON.parse($.cookie('formations')) : [];
+let formations = localStorage.getItem('formations') ? JSON.parse(localStorage.getItem('formations')) : [];
 let selectedIdx = -1;
 const defaultFormation = [
     '兵', '排', '团', '连', '雷', '弹',
@@ -65,7 +65,7 @@ const ROWS = 6, COLS = 5;
 const forbiddenPoints = [[1,1],[1,3],[2,2],[3,1],[3,3]];
 const flagPoints = [[5,1],[5,3]];
 function saveFormations() {
-    $.cookie('formations', JSON.stringify(formations), {expires:365, path:'/'});
+    localStorage.setItem('formations', JSON.stringify(formations));
 }
 // 阵型列表渲染
 function renderFormationList() {
