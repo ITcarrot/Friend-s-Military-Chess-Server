@@ -195,12 +195,16 @@
 {% block extra_js %}
 <script>
 let colors = {{ colors | tojson }};
-let positions = {{ positions | tojson }};
+let positions = {};
 let userId = "{{ user_id }}";
 let roomId = {{ room_id }};
 let roomType = {{ room.room_type }};
 let userSeat = 0;
 let isActive = {{ 'true' if room.active else 'false' }};
+
+$.getJSON('/static/positions.json', function(data) {
+    positions = data;
+});
 
 // 更新房间状态
 function updateRoomStatus() {

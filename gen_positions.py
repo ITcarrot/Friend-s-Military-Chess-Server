@@ -1,4 +1,4 @@
-import pickle
+import json
 
 def gen(x: list[int], y: list[int]) -> list[tuple[int, int]]:
     """生成(x,y)的笛卡尔积"""
@@ -56,4 +56,5 @@ extra = [(381, 721), (484, 578), (484, 621)]
 center = (484, 477)
 positions[8] = gen_all(player, extra, center, 45)
 
-pickle.dump(positions, open('positions.pkl', 'wb'))
+with open('static/positions.json', 'w') as f:
+    json.dump(positions, f)
