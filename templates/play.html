@@ -445,6 +445,7 @@ function drawArrow(move) {
     arrowLayer.append(line);
 }
 
+const chessOrder = ['雷', '司', '军', '师', '旅', '团', '营', '连', '排', '兵', '旗'];
 let last_battle_pair = (null, null);
 let last_record_id = null;
 function playSound(battle, record_id, battle_result) {
@@ -456,9 +457,23 @@ function playSound(battle, record_id, battle_result) {
 
     if (record_id != last_record_id) {
         if (battle_result) {
-            $('#' + battle_result + 'Sound')[0].play();
+            $('#' + battle_result[0] + 'Sound')[0].play();
         } else {
             $('#moveSound')[0].play();
+        }
+        if (battle_result && battle_result.length > 1){
+            let winner = chessMap[battle_result[1]].text();
+            let loser = chessMap[battle_result[2]].text();
+            let guessWinner = '!';
+            if (chessOrder.indexOf(loser) > 0) {
+                guessWinner = chessOrder[chessOrder.indexOf(loser) - 1];
+            }
+            if (winner == '' || winner == '!' || chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner)) {
+                let tags = $.cookie(`tags_${roomId}`) || '{}';
+                tags = JSON.parse(tags);
+                tags[battle_result[1]] = guessWinner;
+                $.cookie(`tags_${roomId}`, JSON.stringify(tags), { path: '/' });
+            }
         }
         last_record_id = record_id;
         drawSector(1);

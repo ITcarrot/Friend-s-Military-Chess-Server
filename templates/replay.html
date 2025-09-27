@@ -129,7 +129,8 @@ function updateReplay(step) {
     }
 
     if (board.last_battle_result) {
-        $('#' + board.last_battle_result + 'Sound')[0].play();
+        let soundStr = Array.isArray(board.last_battle_result) ? board.last_battle_result[0] : board.last_battle_result;
+        $('#' + soundStr + 'Sound')[0].play();
     } else {
         $('#moveSound')[0].play();
     }

@@ -690,19 +690,19 @@ def respond_attack():
             result = attacker.compare(defender)
             if result > 0:
                 defender.alive = False
-                chess_board.last_battle_result = 'win'
+                chess_board.last_battle_result = ['win', attacker.id, defender.id]
             elif result < 0:
                 attacker.alive = False
-                chess_board.last_battle_result = 'lose'
+                chess_board.last_battle_result = ['lose', defender.id, attacker.id]
             else:
                 attacker.alive = False
                 defender.alive = False
-                chess_board.last_battle_result = 'draw'
+                chess_board.last_battle_result = ['draw']
             
             if attacker.name == '司' and not attacker.alive:
-                chess_board.last_battle_result = '40lost'
+                chess_board.last_battle_result = ['40lost']
             if defender.name == '司' and not defender.alive:
-                chess_board.last_battle_result = '40lost'
+                chess_board.last_battle_result = ['40lost']
             
             if defender.name == '旗':
                 for chess in chess_board.chesses:
