@@ -242,7 +242,7 @@ function drawArrow(move) {
     arrowLayer.append(line);
 }
 
-const chessOrder = ['雷', '司', '军', '师', '旅', '团', '营', '连', '排', '兵', '旗'];
+const chessOrder = ['雷', '司', '军', '师', '旅', '团', '营', '连', '排', '兵'];
 let last_battle_pair = (null, null);
 let last_record_id = null;
 function playSound(battle, record_id, battle_result) {
@@ -265,7 +265,8 @@ function playSound(battle, record_id, battle_result) {
             if (chessOrder.indexOf(loser) > 0) {
                 guessWinner = chessOrder[chessOrder.indexOf(loser) - 1];
             }
-            if (winner == '' || winner == '!' || chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner)) {
+            if (winner == '' || winner == '!' ||
+                (0 <= chessOrder.indexOf(guessWinner) && chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner))) {
                 let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
                 tags = JSON.parse(tags);
                 tags[battle_result[1]] = guessWinner;
