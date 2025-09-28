@@ -3,13 +3,13 @@
 {% block title %}房间 {{ room_id }} - 军旗棋盘{% endblock %}
 
 {% block content %}
-<audio id="selectSound" src="/audio/select.mp3" preload="auto"></audio>
-<audio id="moveSound" src="/audio/move.mp3" preload="auto"></audio>
-<audio id="attackSound" src="/audio/attack.mp3" preload="auto"></audio>
-<audio id="40lostSound" src="/audio/40lost.mp3" preload="auto"></audio>
-<audio id="winSound" src="/audio/win.mp3" preload="auto"></audio>
-<audio id="loseSound" src="/audio/lose.mp3" preload="auto"></audio>
-<audio id="drawSound" src="/audio/draw.mp3" preload="auto"></audio>
+<audio id="selectSound" src="/static/audio/select.mp3" preload="auto"></audio>
+<audio id="moveSound" src="/static/audio/move.mp3" preload="auto"></audio>
+<audio id="attackSound" src="/static/audio/attack.mp3" preload="auto"></audio>
+<audio id="40lostSound" src="/static/audio/40lost.mp3" preload="auto"></audio>
+<audio id="winSound" src="/static/audio/win.mp3" preload="auto"></audio>
+<audio id="loseSound" src="/static/audio/lose.mp3" preload="auto"></audio>
+<audio id="drawSound" src="/static/audio/draw.mp3" preload="auto"></audio>
 
 <div class="d-flex justify-content-between mb-4">
     <a href="/" class="btn btn-secondary" onclick="$('.leave-btn').click();">
@@ -153,7 +153,7 @@
                             <div class="m-1" 
                                 style="width:60px; height:60px; cursor: pointer;" 
                                 onclick="sendEmoji({{ i }});">
-                                <img src="/img/emoji{{ i }}.png" alt="emoji" style="width:100%; height:100%;">
+                                <img src="/static/img/emoji{{ i }}.png" alt="emoji" style="width:100%; height:100%;">
                             </div>
                             {% endfor %}
                             <div class="m-1 rounded-circle border" 
@@ -202,5 +202,5 @@ let roomType = {{ room.room_type }};
 let userSeat = 0;
 let isActive = {{ 'true' if room.active else 'false' }};
 </script>
-<script src="/static/play.js"></script>
+<script src="/static/js/play.js"></script>
 {% endblock %}

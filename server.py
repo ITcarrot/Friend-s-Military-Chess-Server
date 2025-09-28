@@ -63,7 +63,7 @@ def check_login(func):
 @app.route('/compare')
 def compare():
     """军棋大小判定器"""
-    return render_template('compare.html')
+    return send_from_directory('templates/', 'compare.html')
 
 @app.route('/')
 @check_login
@@ -145,7 +145,7 @@ def play_room(room_id):
     room = Room.query.get_or_404(room_id)
     
     return render_template('play.html', room_id=room_id, username=username, 
-                          user_id=user_id, room=room, colors=COLORS, positions=pickle.load(open('positions.pkl', 'rb')))
+                          user_id=user_id, room=room, colors=COLORS)
 
 @app.route('/replay_list')
 @check_login
@@ -719,20 +719,6 @@ def respond_attack():
         room.battle = None
     
     return jsonify({'status': 'success'})
-
-@app.route('/img/<path:filename>')
-def serve_image(filename):
-    """服务静态图片"""
-    if re.match(r'^[0-9a-zA-Z_-]+\.[a-zA-Z]{3,4}$', filename) is None:
-        return "Invalid filename", 400
-    return send_from_directory('img/', filename)
-
-@app.route('/audio/<path:filename>')
-def serve_audio(filename):
-    """服务静态音频"""
-    if re.match(r'^[0-9a-zA-Z_-]+\.[a-zA-Z0-9]{3,4}$', filename) is None:
-        return "Invalid filename", 400
-    return send_from_directory('audio/', filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

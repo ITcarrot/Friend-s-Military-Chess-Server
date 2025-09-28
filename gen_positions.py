@@ -56,5 +56,5 @@ extra = [(381, 721), (484, 578), (484, 621)]
 center = (484, 477)
 positions[8] = gen_all(player, extra, center, 45)
 
-with open('static/positions.json', 'w') as f:
+with open('static/json/positions.json', 'w') as f:
     json.dump(positions, f)

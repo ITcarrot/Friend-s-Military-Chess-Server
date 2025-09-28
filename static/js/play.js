@@ -1,4 +1,4 @@
-$.getJSON('/static/positions.json', function(data) {
+$.getJSON('/static/json/positions.json', function(data) {
     positions = data;
 });
 
@@ -10,7 +10,7 @@ function updateRoomStatus() {
 
         // 更新房间状态
         $('#roomTypeSelect').val(data.room_type);
-        $('#board-img').attr('src', `/img/${data.room_type}.jpg`);
+        $('#board-img').attr('src', `/static/img/${data.room_type}.jpg`);
         
         // 更新开始游戏按钮
         $('#startGameBtn').prop('disabled', !data.can_start);
@@ -339,7 +339,7 @@ function updateChatMessages() {
             const container = $("#boardContainer");
             container.find("img.emoji").remove();
             data.emojis.forEach(emoji => {
-                const img = $('<img>').addClass('emoji').attr('src', '/img/emoji' + emoji.emoji + '.png').css({
+                const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + emoji.emoji + '.png').css({
                     left: emoji.x,
                     top: emoji.y,
                     position: 'absolute',
@@ -388,7 +388,7 @@ function sendEmoji(id)
     const y = pos.top + 42;
     // 直接显示刚发送的emoji表情
     const container = $("#boardContainer");
-    const img = $('<img>').addClass('emoji').attr('src', '/img/emoji' + id + '.png').css({
+    const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + id + '.png').css({
         left: x - 30,
         top: y - 30,
         position: 'absolute',
