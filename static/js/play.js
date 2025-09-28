@@ -115,10 +115,7 @@ function updateBoard(board, battle) {
     let el = chessMap[chess.id];
     if (!el) {
         // 新建棋子节点 (Bootstrap 风格圆形按钮)
-        el = $(`<div class="btn btn-sm rounded-circle border fw-bold" 
-                    style="width:40px; height:40px; line-height:28px;
-                            color:white; font-size:18px; z-index:10;
-                            position:absolute; text-align:center;"></div>`);
+        el = $(`<div class="btn btn-sm rounded-circle border fw-bold chess"></div>`);
         el.attr("data-id", chess.id);
         el.attr("data-team", chess.team);
         container.append(el);
@@ -750,10 +747,7 @@ function renderFormationPreview()
     // 显示预览
     formation.forEach((text, i) => {
         if (text === '') return;
-        let el = $(`<div class="btn btn-sm rounded-circle border fw-bold" 
-                    style="width:40px; height:40px; line-height:28px;
-                            color:white; font-size:18px; z-index:20;
-                            position:absolute; text-align:center;"></div>`);
+        let el = $(`<div class="btn btn-sm rounded-circle border fw-bold chess"></div>`);
         el.css("background-color", colors[0]);
         el.text(text);
         el.css({

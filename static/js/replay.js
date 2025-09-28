@@ -8,10 +8,7 @@ function updateReplay(step) {
         let el = chessMap[chess.id];
         if (!el) {
             // 新建棋子节点 (Bootstrap 风格圆形按钮)
-            el = $(`<div class="btn btn-sm rounded-circle border fw-bold" 
-                        style="width:40px; height:40px; line-height:28px;
-                                color:white; font-size:18px; z-index:10;
-                                position:absolute; text-align:center;"></div>`);
+            el = $(`<div class="btn btn-sm rounded-circle border fw-bold chess"></div>`);
             container.append(el);
             chessMap[chess.id] = el;
             el.text(chess.name); 
