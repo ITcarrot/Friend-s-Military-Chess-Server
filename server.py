@@ -8,6 +8,16 @@ import logging
 logging.basicConfig(level=logging.DEBUG, filename='server.log', filemode='a')
 
 app = Flask(__name__)
+@app.after_request
+def restore_etag(response):
+    # 撤销flask-compress对ETag的修改
+    chosen_algorithm = response.headers.get("Content-Encoding")
+    etag = response.headers.get("ETag")
+    if chosen_algorithm and etag:
+        suffix_len = len(chosen_algorithm) + 2  # 包括冒号和引号
+        if etag.endswith(f':{chosen_algorithm}"'):
+            response.headers["ETag"] = etag[:-suffix_len] + '"'
+    return response
 Compress(app)
 from db_tables import db_init
 db_init(app)
