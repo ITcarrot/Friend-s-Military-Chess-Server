@@ -218,8 +218,6 @@ def room_status(room: Room):
 
 def get_board(user_id, room: Room):
     """获取棋盘状态API"""
-    user_team = room.get_player_team(user_id)
-    
     if not room.active:
         return {}
 
@@ -227,6 +225,7 @@ def get_board(user_id, room: Room):
     if not record:
         return {}
     
+    user_team = room.get_player_team(user_id)
     chess_board = ChessBoard.from_json(record.board_state)
     has40 = [False] * (room.room_type + 1)
     for chess in chess_board.chesses:
@@ -242,7 +241,7 @@ def get_board(user_id, room: Room):
         'board': chess_board.to_dict(),
     }
 
-@app.route('/api/room_status/<int:room_id>', methods=['GET'])
+@app.route('/api/room_status/<int:room_id>', methods=['POST'])
 @check_login
 def room_status_all(room_id):
     user_id = request.cookies.get('user_id')
@@ -255,7 +254,9 @@ def room_status_all(room_id):
     response = {}
     response['status'] = room_status(room)
 
-    messages = Message.query.filter_by(room_id=room_id) \
+    last_msg_id = request.json.get('last_msg_id')
+    messages = Message.query.filter(Message.id > last_msg_id) \
+                            .filter_by(room_id=room_id) \
                             .order_by(Message.timestamp.desc()) \
                             .limit(50).all()
     messages.reverse()

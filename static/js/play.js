@@ -298,57 +298,61 @@ function playSound(battle, record_id, battle_result) {
 }
 
 // 获取聊天消息
-let last_msg_timestamp = '';
+let last_msg_id = -1;
 function updateChatMessages(messages) {
-    let messagesHtml = '';
-    
-    // 生成消息HTML
-    messages.forEach(msg => {
-        if (msg.is_system) {
-            // 系统消息
-            messagesHtml += `
-                <div class="mb-2 text-center">
-                    <small class="text-muted">[${msg.timestamp}] ${msg.content}</small>
-                </div>
-            `;
-        } else {
-            // 用户消息
-            messagesHtml += `
+    if (last_msg_id !== -1) {
+        // 在弹窗显示最近5秒的消息
+        const popupContainer = $('#chatPopup');
+
+        popupContainer.children().each(function(_, el) {
+            const msgTime = new Date(el.timestamp);
+            const now = new Date();
+            if (now - msgTime > 5000) {
+                el.remove();
+            }
+        });
+        messages.forEach(msg => {
+            item = $(`
                 <div class="mb-2">
                     <strong>${msg.sender}:</strong> ${msg.content}
                     <small class="text-muted float-end">${msg.timestamp}</small>
                 </div>
-            `;
-        }
-    });
-    
-    $('#chatWindow').html(messagesHtml);
-    
-    // 滚动到底部
-    new_last_msg_timestamp = messages.length > 0 ? messages[messages.length - 1].timestamp : '';
-    if(new_last_msg_timestamp !== last_msg_timestamp){
-        last_msg_timestamp = new_last_msg_timestamp;
-        $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
+            `);
+            item[0].timestamp = new Date();
+            popupContainer.append(item);
+        });
+        if(popupContainer.children().length)
+            popupContainer.show();
+        else
+            popupContainer.hide();
     }
 
-    // 在弹窗显示最近5秒的消息
-    const messagesForPopup = messages.filter(msg => { return msg.is_recent; });
-    const messagesContainer = $('#chatPopup');
-
-    // 显示最近5秒的消息
-    messagesContainer.empty();
-    messagesForPopup.forEach(msg => {
-        messagesContainer.append(`
-            <div class="mb-2">
-                <strong>${msg.sender}:</strong> ${msg.content}
-                <small class="text-muted float-end">${msg.timestamp}</small>
-            </div>
-        `);
+    const container = $('#chatWindow');
+    
+    messages.forEach(msg => {
+        if (msg.is_system) {
+            // 系统消息
+            item = $(`
+                <div class="mb-2 text-center">
+                    <small class="text-muted">[${msg.timestamp}] ${msg.content}</small>
+                </div>
+            `);
+        } else {
+            // 用户消息
+            item = $(`
+                <div class="mb-2">
+                    <strong>${msg.sender}:</strong> ${msg.content}
+                    <small class="text-muted float-end">${msg.timestamp}</small>
+                </div>
+            `);
+        }
+        container.append(item);
+        last_msg_id = msg.id;
     });
-    if(messagesForPopup.length > 0)
-        messagesContainer.show();
-    else
-        messagesContainer.hide();
+    // 滚动到底部
+    if(messages.length > 0){
+        $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
+    }
 }
 
 function updateEmojis(emojis) {
@@ -802,22 +806,31 @@ $('#setFormationBtn').click(function() {
 
 // 和服务器交互
 function updateRoomStatusAll() {
-    $.getJSON(`/api/room_status/${roomId}`, function(data) {
-        updateRoomStatus(data.status);
-        updateChatMessages(data.messages);
-        updateEmojis(data.emojis);
-        if(isActive){
-            updateBoard(data.board.board, data.status.battle);
-            playSound(data.status.battle, data.board.record_id, data.board.board.last_battle_result);
-        }else{
-            // 清除棋盘
-            Object.values(chessMap).forEach(el => el.remove());
-            chessMap = {};
-            selectedId = null;
-            $("#arrowLayer").find("line").remove();
+    $.ajax({
+        url: `/api/room_status/${roomId}`,
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            last_msg_id: last_msg_id
+        }),
+        success: function(data) {
+            updateRoomStatus(data.status);
+            updateChatMessages(data.messages);
+            updateEmojis(data.emojis);
+            if(isActive){
+                updateBoard(data.board.board, data.status.battle);
+                playSound(data.status.battle, data.board.record_id, data.board.board.last_battle_result);
+            }else{
+                // 清除棋盘
+                Object.values(chessMap).forEach(el => el.remove());
+                chessMap = {};
+                selectedId = null;
+                $("#arrowLayer").find("line").remove();
+            }
+        },
+        complete: function() {
+            setTimeout(updateRoomStatusAll, 500);
         }
-    }).always(function() {
-        setTimeout(updateRoomStatusAll, 100);
     });
 }
 $(document).ready(function() {

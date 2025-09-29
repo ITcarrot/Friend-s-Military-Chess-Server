@@ -96,11 +96,9 @@ def db_init(app):
             """转换为字典格式"""
             return {
                 'id': self.id,
-                'room_id': self.room_id,
                 'sender': self.sender,
                 'content': self.content,
                 'timestamp': self.timestamp.strftime('%m-%d %H:%M:%S'),
-                'is_recent': (datetime.now() - self.timestamp <= timedelta(seconds=5)),
                 'is_system': self.is_system
             }
     
