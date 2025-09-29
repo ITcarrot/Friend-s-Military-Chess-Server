@@ -110,11 +110,11 @@ def db_init(app):
         emoji = db.Column(db.Integer, nullable=False)
         x = db.Column(db.Float, nullable=False)
         y = db.Column(db.Float, nullable=False)
-        timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
         
         def to_dict(self):
             """转换为字典格式"""
             return {
+                'id': self.id,
                 'team_id': self.team_id,
                 'emoji': self.emoji,
                 'x': self.x,
@@ -144,4 +144,8 @@ def db_init(app):
             if not room:
                 room = Room(room_id=i)
                 db.session.add(room)
+        # 垫一个emoji
+        if not Emoji.query.get(1):
+            emoji = Emoji(room_id=1, team_id=1, emoji=1, x=0, y=0)
+            db.session.add(emoji)
         db.session.commit()

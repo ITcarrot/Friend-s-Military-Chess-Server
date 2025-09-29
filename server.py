@@ -262,10 +262,14 @@ def room_status_all(room_id):
     messages.reverse()
     response['messages'] = [msg.to_dict() for msg in messages]
 
-    emojis = Emoji.query.filter(Emoji.timestamp >= datetime.now() - timedelta(seconds=2)) \
-                        .filter_by(room_id=room_id).all()
-    response['emojis'] = [emoji.to_dict() for emoji in emojis]
-    
+    last_emoji_id = request.json.get('last_emoji_id')
+    if last_emoji_id == -1:
+        response['emojis'] = Emoji.query.order_by(Emoji.id.desc()).first().id
+    else:
+        emojis = Emoji.query.filter(Emoji.id > last_emoji_id) \
+                            .filter_by(room_id=room_id).all()
+        response['emojis'] = [emoji.to_dict() for emoji in emojis]
+
     response['board'] = get_board(user_id, room)
     
     return jsonify(response)

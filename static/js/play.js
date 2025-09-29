@@ -355,10 +355,21 @@ function updateChatMessages(messages) {
     }
 }
 
+let last_emoji_id = -1;
 function updateEmojis(emojis) {
+    if (last_emoji_id === -1) {
+        last_emoji_id = emojis;
+        return;
+    }
     // 显示emoji表情
     const container = $("#boardContainer");
-    container.find("img.emoji").remove();
+    container.find("img.emoji").each(function(_, img) {
+        const timestamp = new Date(img.timestamp);
+        const now = new Date();
+        if (now - timestamp > 2000) {
+            img.remove();
+        }
+    });
     emojis.forEach(emoji => {
         const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + emoji.emoji + '.png').css({
             left: emoji.x,
@@ -372,7 +383,9 @@ function updateEmojis(emojis) {
             borderRadius: '12px',
             boxSizing: 'border-box',
         });
+        img[0].timestamp = new Date();
         container.append(img);
+        last_emoji_id = emoji.id;
     });
 }
 
@@ -405,21 +418,6 @@ function sendEmoji(id)
     pos = $('#emojiPopup').position();
     const x = pos.left + 180;
     const y = pos.top + 42;
-    // 直接显示刚发送的emoji表情
-    const container = $("#boardContainer");
-    const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + id + '.png').css({
-        left: x - 30,
-        top: y - 30,
-        position: 'absolute',
-        width: '60px',
-        height: '60px'
-    });
-    img.css({
-        border: '2px solid ' + colors[userSeat],
-        borderRadius: '12px',
-        boxSizing: 'border-box',
-    });
-    container.append(img);
     $('#emojiPopup').hide();
     $.ajax({
         url: '/api/emoji/send',
@@ -811,7 +809,8 @@ function updateRoomStatusAll() {
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
-            last_msg_id: last_msg_id
+            last_msg_id: last_msg_id,
+            last_emoji_id: last_emoji_id
         }),
         success: function(data) {
             updateRoomStatus(data.status);
