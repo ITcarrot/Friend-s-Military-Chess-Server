@@ -1,24 +1,12 @@
-from server import app
-from cheroot import wsgi
-from cheroot.ssl.builtin import BuiltinSSLAdapter
+if __name__ == "__main__":
+    from hypercorn.config import Config
+    config = Config()
+    config.application_path = "server:app"
+    config.bind = ["0.0.0.0:42000"] 
+    config.workers = 32
+    # config.keyfile = "ssl/key.pem"
+    # config.certfile = "ssl/cert.pem"
+    config.errorlog = "server.log"
 
-import sys
-PROJECT_ROOT = sys.path[0]
-sys.stdout = open(f"{PROJECT_ROOT}\\server.log", "a")
-sys.stderr = open(f"{PROJECT_ROOT}\\server.log", "a")
-
-server_args = {
-    "bind_addr": ('0.0.0.0', 42000),
-    "wsgi_app": app,
-    "numthreads": 32,
-}
-server = wsgi.Server(**server_args)
-
-try:
-    adapter = BuiltinSSLAdapter(certificate=f"{PROJECT_ROOT}\\ssl\\cert.pem", private_key=f"{PROJECT_ROOT}\\ssl\\key.pem")
-    server.ssl_adapter = adapter
-    print("Starting HTTPS server...")
-except Exception as e:
-    print(f"Failed to start HTTPS server: {e}")
-    print("Starting HTTP server instead...")
-server.start()
+    from hypercorn.run import run
+    run(config)

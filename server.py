@@ -5,7 +5,7 @@ import hashlib, uuid, re, math, json, pickle
 from game import *
 
 import logging
-logging.basicConfig(level=logging.DEBUG, filename='server.log', filemode='a')
+logging.basicConfig(level=logging.INFO, filename='server.log', filemode='a')
 
 app = Flask(__name__)
 @app.after_request
