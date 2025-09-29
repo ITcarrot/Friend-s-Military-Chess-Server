@@ -1,3 +1,24 @@
+function ajaxWithLoading(options) {
+    $('#loadingOverlay').fadeIn();
+    return $.ajax(options)
+        .fail(function() {
+            alert('网络错误，操作失败，请重试');
+        })
+        .always(function() {
+            $('#loadingOverlay').hide();
+        });
+}
+
+function postWithLoading(url, data, success) {
+    $('#loadingOverlay').fadeIn();
+    $.post(url, data, success)
+    .fail(function() {
+        alert('网络错误，操作失败，请重试');
+    }).always(function() {
+        $('#loadingOverlay').hide();
+    });
+}
+
 $.getJSON('/static/json/positions.json', function(data) {
     positions = data;
 });
@@ -155,7 +176,7 @@ function updateBoard(board, battle) {
                         alert('雷和旗不能攻击！');
                         return;
                     }
-                    $.ajax({
+                    ajaxWithLoading({
                         url: '/api/attack_chess',
                         type: 'POST',
                         contentType: 'application/json',
@@ -359,7 +380,8 @@ function updateChatMessages() {
 function sendChatMessage() {
     const content = $('#chatInput').val().trim();
     if (content) {
-        $.ajax({
+        $('#chatInput').blur();
+        ajaxWithLoading({
             url: '/api/chat/send',
             type: 'POST',
             contentType: 'application/json',
@@ -370,7 +392,6 @@ function sendChatMessage() {
             success: function(response) {
                 if (response.status === 'success') {
                     $('#chatInput').val(''); // 清空输入框
-                    updateChatMessages(); // 更新消息显示
                 } else {
                     alert('发送消息失败: ' + response.message);
                 }
@@ -399,6 +420,7 @@ function sendEmoji(id)
         boxSizing: 'border-box',
     });
     container.append(img);
+    $('#emojiPopup').hide();
     $.ajax({
         url: '/api/emoji/send',
         type: 'POST',
@@ -415,7 +437,6 @@ function sendEmoji(id)
             }
         }
     });
-    $('#emojiPopup').hide();
 }
 
 function tagChess(tag) {
@@ -435,10 +456,8 @@ function bindEvents() {
     // 占座按钮
     $('.seat-btn').click(function() {
         const seat = $(this).data('seat');
-        $.post(`/api/take_seat/${roomId}/${seat}`, function(response) {
-            if (response.status === 'success') {
-                updateRoomStatus();
-            } else {
+        postWithLoading(`/api/take_seat/${roomId}/${seat}`, {}, function(response) {
+            if (response.status !== 'success') {
                 alert(response.message);
             }
         });
@@ -448,10 +467,8 @@ function bindEvents() {
     $('.leave-btn').click(function() {
         const seat = $(this).data('seat');
         if(!isActive || confirm('当前游戏正在进行中，离座将会退出游戏。确定要离座吗？')){
-            $.post(`/api/leave_seat/${roomId}/${seat}`, function(response) {
-                if (response.status === 'success') {
-                    updateRoomStatus();
-                } else {
+            postWithLoading(`/api/leave_seat/${roomId}/${seat}`, {}, function(response) {
+                if (response.status !== 'success') {
                     alert(response.message);
                 }
             });
@@ -462,10 +479,8 @@ function bindEvents() {
     $('.kick-btn').click(function() {
         const seat = $(this).data('seat');
         if (confirm('确定要踢出该玩家吗？')) {
-            $.post(`/api/kick_player/${roomId}/${seat}`, function(response) {
-                if (response.status === 'success') {
-                    updateRoomStatus();
-                } else {
+            postWithLoading(`/api/kick_player/${roomId}/${seat}`, {}, function(response) {
+                if (response.status !== 'success') {
                     alert(response.message);
                 }
             });
@@ -477,15 +492,13 @@ function bindEvents() {
 $('#roomTypeSelect').change(function(e) {
     const newType = $(this).val();
     if (confirm(`确定要修改房间类型为${newType}人吗？超出位置的玩家将被自动踢出。`)) {
-        $.ajax({
+        ajaxWithLoading({
             url: `/api/change_room_type/${roomId}`,
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({ room_type: parseInt(newType) }),
             success: function(response) {
-                if (response.status === 'success') {
-                    updateRoomStatus();
-                } else {
+                if (response.status !== 'success') {
                     alert(response.message);
                 }
             }
@@ -497,10 +510,8 @@ $('#roomTypeSelect').change(function(e) {
 
 // 开始游戏
 $('#startGameBtn').click(function() {
-    $.post(`/api/start_game/${roomId}`, function(response) {
-        if (response.status === 'success') {
-            updateRoomStatus();
-        } else {
+    postWithLoading(`/api/start_game/${roomId}`, {}, function(response) {
+        if (response.status !== 'success') {
             alert(response.message);
         }
     });
@@ -509,10 +520,8 @@ $('#startGameBtn').click(function() {
 // 结束游戏
 $('#EndGameBtn').click(function() {
     if (confirm('确定要结束当前游戏吗？')) {
-        $.post(`/api/stop_game/${roomId}`, function(response) {
-            if (response.status === 'success') {
-                updateRoomStatus();
-            } else {
+        postWithLoading(`/api/stop_game/${roomId}`, {}, function(response) {
+            if (response.status !== 'success') {
                 alert(response.message);
             }
         });
@@ -575,11 +584,8 @@ $("#boardContainer").on("click", function(e) {
             }
         }
 
-    // 先弄出箭头
     const [old_x, old_y] = [chessMap[selectedId].position().left, chessMap[selectedId].position().top];
-    drawArrow([old_x, old_y, x, y]);
-    // 这里你可能要发请求给后端 API 告诉服务器移动动作
-    $.ajax({
+    ajaxWithLoading({
         url: '/api/move_chess',
         type: 'POST',
         contentType: 'application/json',
@@ -593,7 +599,7 @@ $("#boardContainer").on("click", function(e) {
             if (response.status !== 'success') {
                 alert('移动失败: ' + response.message);
             } else {
-                drawArrow([old_x, old_y, x, y]); // 确认移动后再画一次箭头
+                drawArrow([old_x, old_y, x, y]); // 确认移动后画一次箭头
             }
         }
     });
@@ -604,7 +610,7 @@ $("#boardContainer").on("click", function(e) {
 });
 
 function respondToAttack(accept) {
-    $.ajax({
+    ajaxWithLoading({
         url: '/api/respond_attack',
         type: 'POST',
         contentType: 'application/json',
@@ -615,6 +621,8 @@ function respondToAttack(accept) {
         success: function(response) {
             if (response.status !== 'success') {
                 alert('操作失败: ' + response.message);
+            } else {
+                $('#attackPopup').hide();
             }
         }
     });
@@ -803,7 +811,7 @@ $('#setFormationBtn').click(function() {
     previewChess.forEach(el => el.remove());
     previewChess = [];
     
-    $.ajax({
+    ajaxWithLoading({
         url: '/api/set_formation',
         type: 'POST',
         contentType: 'application/json',
