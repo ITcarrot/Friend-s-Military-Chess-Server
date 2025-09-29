@@ -24,102 +24,100 @@ $.getJSON('/static/json/positions.json', function(data) {
 });
 
 // 更新房间状态
-function updateRoomStatus() {
-    $.getJSON(`/api/room_status/${roomId}`, function(data) {
-        roomType = data.room_type;
-        isActive = data.status;
+function updateRoomStatus(data) {
+    roomType = data.room_type;
+    isActive = data.status;
 
-        // 更新房间状态
-        $('#roomTypeSelect').val(data.room_type);
-        $('#board-img').attr('src', `/static/img/${data.room_type}.jpg`);
+    // 更新房间状态
+    $('#roomTypeSelect').val(data.room_type);
+    $('#board-img').attr('src', `/static/img/${data.room_type}.jpg`);
+    
+    // 更新开始游戏按钮
+    $('#startGameBtn').prop('disabled', !data.can_start);
+    if (data.status) {
+        $('#startGameBtn').hide();
+        $('#EndGameBtn').show();
+    } else {
+        $('#startGameBtn').show();
+        $('#EndGameBtn').hide();
+    }
+    
+    // 创建所有座位的数组
+    let allSeats = [];
+    for (let i = 1; i <= data.room_type; i++) {
+        allSeats.push(i);
+    }
+    
+    // 更新玩家列表 - 按座位顺序显示
+    let playersHtml = '';
+    
+    // 先创建已占用的座位
+    let occupiedSeats = {};
+    userSeat = 0; // 重置用户座位
+    data.players.forEach(player => {
+        occupiedSeats[player.seat] = player;
         
-        // 更新开始游戏按钮
-        $('#startGameBtn').prop('disabled', !data.can_start);
-        if (data.status) {
-            $('#startGameBtn').hide();
-            $('#EndGameBtn').show();
-        } else {
-            $('#startGameBtn').show();
-            $('#EndGameBtn').hide();
+        // 记录用户座位
+        if (player.user_id === userId) {
+            userSeat = player.seat;
         }
-        
-        // 创建所有座位的数组
-        let allSeats = [];
-        for (let i = 1; i <= data.room_type; i++) {
-            allSeats.push(i);
-        }
-        
-        // 更新玩家列表 - 按座位顺序显示
-        let playersHtml = '';
-        
-        // 先创建已占用的座位
-        let occupiedSeats = {};
-        userSeat = 0; // 重置用户座位
-        data.players.forEach(player => {
-            occupiedSeats[player.seat] = player;
-            
-            // 记录用户座位
-            if (player.user_id === userId) {
-                userSeat = player.seat;
-            }
-        });
-        
-        // 按座位顺序显示
-        allSeats.forEach(seat => {
-            if (occupiedSeats[seat]) {
-                const player = occupiedSeats[seat];
-                playersHtml += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
-                            <span>${player.username}</span>
-                            <span class="badge bg-${player.online ? 'success' : 'danger'} ms-2">
-                                ${player.online ? '在线' : '离线'}
-                            </span>
-                        </div>
-                        <div>
-                            ${player.user_id !== userId ? `
-                                <button class="btn btn-sm btn-outline-danger kick-btn" data-seat="${seat}">
-                                    <i class="fas fa-user-times"></i>
-                                </button>
-                            ` : `
-                                <button class="btn btn-sm btn-outline-warning leave-btn" data-seat="${seat}">
-                                    <i class="fas fa-sign-out-alt"></i>
-                                </button>
-                            `}
-                        </div>
-                    </div>
-                `;
-            } else {
-                // 空座位
-                playersHtml += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
-                            <span class="text-muted">空座位</span>
-                        </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-primary seat-btn" data-seat="${seat}">
-                                <i class="fas fa-chair"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-        });
-        
-        $('#playersList').html(playersHtml);
-        
-        // 更新用户座位信息
-        if (userSeat > 0) {
-            $('#userSeatInfo').html(`您坐在 <span class="badge" style="background:${colors[userSeat]}">${userSeat}号位</span> - 您可以点击离座按钮退出座位`);
-        } else {
-            $('#userSeatInfo').html('您当前是观战状态 - 点击空座位的椅子图标可以加入游戏');
-        }
-        
-        // 绑定事件
-        bindEvents();
     });
+    
+    // 按座位顺序显示
+    allSeats.forEach(seat => {
+        if (occupiedSeats[seat]) {
+            const player = occupiedSeats[seat];
+            playersHtml += `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
+                        <span>${player.username}</span>
+                        <span class="badge bg-${player.online ? 'success' : 'danger'} ms-2">
+                            ${player.online ? '在线' : '离线'}
+                        </span>
+                    </div>
+                    <div>
+                        ${player.user_id !== userId ? `
+                            <button class="btn btn-sm btn-outline-danger kick-btn" data-seat="${seat}">
+                                <i class="fas fa-user-times"></i>
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-outline-warning leave-btn" data-seat="${seat}">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        `}
+                    </div>
+                </div>
+            `;
+        } else {
+            // 空座位
+            playersHtml += `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
+                        <span class="text-muted">空座位</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary seat-btn" data-seat="${seat}">
+                            <i class="fas fa-chair"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    $('#playersList').html(playersHtml);
+    
+    // 更新用户座位信息
+    if (userSeat > 0) {
+        $('#userSeatInfo').html(`您坐在 <span class="badge" style="background:${colors[userSeat]}">${userSeat}号位</span> - 您可以点击离座按钮退出座位`);
+    } else {
+        $('#userSeatInfo').html('您当前是观战状态 - 点击空座位的椅子图标可以加入游戏');
+    }
+    
+    // 绑定事件
+    bindEvents();
 }
 
 let chessMap = {};
@@ -301,78 +299,76 @@ function playSound(battle, record_id, battle_result) {
 
 // 获取聊天消息
 let last_msg_timestamp = '';
-function updateChatMessages() {
-    $.getJSON(`/api/chat/messages/${roomId}`, function(data) {
-        if (data.status === 'success') {
-            let messagesHtml = '';
-            
-            // 生成消息HTML
-            data.messages.forEach(msg => {
-                if (msg.is_system) {
-                    // 系统消息
-                    messagesHtml += `
-                        <div class="mb-2 text-center">
-                            <small class="text-muted">[${msg.timestamp}] ${msg.content}</small>
-                        </div>
-                    `;
-                } else {
-                    // 用户消息
-                    messagesHtml += `
-                        <div class="mb-2">
-                            <strong>${msg.sender}:</strong> ${msg.content}
-                            <small class="text-muted float-end">${msg.timestamp}</small>
-                        </div>
-                    `;
-                }
-            });
-            
-            $('#chatWindow').html(messagesHtml);
-            
-            // 滚动到底部
-            new_last_msg_timestamp = data.messages.length > 0 ? data.messages[data.messages.length - 1].timestamp : '';
-            if(new_last_msg_timestamp !== last_msg_timestamp){
-                last_msg_timestamp = new_last_msg_timestamp;
-                $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
-            }
-
-            // 在弹窗显示最近5秒的消息
-            const messagesForPopup = data.messages.filter(msg => { return msg.is_recent; });
-            const messagesContainer = $('#chatPopup');
-
-            // 显示最近5秒的消息
-            messagesContainer.empty();
-            messagesForPopup.forEach(msg => {
-                messagesContainer.append(`
-                    <div class="mb-2">
-                        <strong>${msg.sender}:</strong> ${msg.content}
-                        <small class="text-muted float-end">${msg.timestamp}</small>
-                    </div>
-                `);
-            });
-            if(messagesForPopup.length > 0)
-                messagesContainer.show();
-            else
-                messagesContainer.hide();
-            
-            // 显示emoji表情
-            const container = $("#boardContainer");
-            container.find("img.emoji").remove();
-            data.emojis.forEach(emoji => {
-                const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + emoji.emoji + '.png').css({
-                    left: emoji.x,
-                    top: emoji.y,
-                    position: 'absolute',
-                    width: '60px',
-                    height: '60px'
-                });
-                img.css({
-                    border: '2px solid ' + colors[emoji.team_id],
-                    borderRadius: '12px',
-                    boxSizing: 'border-box',
-                });
-                container.append(img);
-            });
+function updateChatMessages(messages) {
+    let messagesHtml = '';
+    
+    // 生成消息HTML
+    messages.forEach(msg => {
+        if (msg.is_system) {
+            // 系统消息
+            messagesHtml += `
+                <div class="mb-2 text-center">
+                    <small class="text-muted">[${msg.timestamp}] ${msg.content}</small>
+                </div>
+            `;
+        } else {
+            // 用户消息
+            messagesHtml += `
+                <div class="mb-2">
+                    <strong>${msg.sender}:</strong> ${msg.content}
+                    <small class="text-muted float-end">${msg.timestamp}</small>
+                </div>
+            `;
         }
+    });
+    
+    $('#chatWindow').html(messagesHtml);
+    
+    // 滚动到底部
+    new_last_msg_timestamp = messages.length > 0 ? messages[messages.length - 1].timestamp : '';
+    if(new_last_msg_timestamp !== last_msg_timestamp){
+        last_msg_timestamp = new_last_msg_timestamp;
+        $('#chatWindow').scrollTop($('#chatWindow')[0].scrollHeight);
+    }
+
+    // 在弹窗显示最近5秒的消息
+    const messagesForPopup = messages.filter(msg => { return msg.is_recent; });
+    const messagesContainer = $('#chatPopup');
+
+    // 显示最近5秒的消息
+    messagesContainer.empty();
+    messagesForPopup.forEach(msg => {
+        messagesContainer.append(`
+            <div class="mb-2">
+                <strong>${msg.sender}:</strong> ${msg.content}
+                <small class="text-muted float-end">${msg.timestamp}</small>
+            </div>
+        `);
+    });
+    if(messagesForPopup.length > 0)
+        messagesContainer.show();
+    else
+        messagesContainer.hide();
+}
+
+function updateEmojis(emojis) {
+    // 显示emoji表情
+    const container = $("#boardContainer");
+    container.find("img.emoji").remove();
+    emojis.forEach(emoji => {
+        const img = $('<img>').addClass('emoji').attr('src', '/static/img/emoji' + emoji.emoji + '.png').css({
+            left: emoji.x,
+            top: emoji.y,
+            position: 'absolute',
+            width: '60px',
+            height: '60px'
+        });
+        img.css({
+            border: '2px solid ' + colors[emoji.team_id],
+            borderRadius: '12px',
+            boxSizing: 'border-box',
+        });
+        container.append(img);
     });
 }
 
@@ -674,32 +670,6 @@ $('#clearTagBtn').click(function() {
     localStorage.removeItem(`tags_${roomId}`);
 });
 
-// 定时更新房间状态和用户最后登录时间
-setInterval(function() {
-    updateRoomStatus();
-    $.post('/api/update_last_login');
-}, 500);
-
-setInterval(() => {
-    if(isActive){
-        $.getJSON(`/api/board/${roomId}`, function(res) {
-            if (res.status === "success") {
-                updateBoard(res.board, res.battle);
-                playSound(res.battle, res.record_id, res.board.last_battle_result);
-            }
-        });
-    }else{
-        // 清除棋盘
-        Object.values(chessMap).forEach(el => el.remove());
-        chessMap = {};
-        selectedId = null;
-        $("#arrowLayer").find("line").remove();
-    }
-}, 500);
-
-// 定时更新聊天消息
-setInterval(updateChatMessages, 1000);
-
 // 行棋提示器
 let sectorStep = 0;
 function drawSector(delta) {
@@ -830,8 +800,26 @@ $('#setFormationBtn').click(function() {
     });
 });
 
-// 初始加载
+// 和服务器交互
+function updateRoomStatusAll() {
+    $.getJSON(`/api/room_status/${roomId}`, function(data) {
+        updateRoomStatus(data.status);
+        updateChatMessages(data.messages);
+        updateEmojis(data.emojis);
+        if(isActive){
+            updateBoard(data.board.board, data.status.battle);
+            playSound(data.status.battle, data.board.record_id, data.board.board.last_battle_result);
+        }else{
+            // 清除棋盘
+            Object.values(chessMap).forEach(el => el.remove());
+            chessMap = {};
+            selectedId = null;
+            $("#arrowLayer").find("line").remove();
+        }
+    }).always(function() {
+        setTimeout(updateRoomStatusAll, 100);
+    });
+}
 $(document).ready(function() {
-    updateRoomStatus();
-    updateChatMessages();
+    updateRoomStatusAll();
 });

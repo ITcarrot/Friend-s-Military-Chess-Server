@@ -189,23 +189,8 @@ def formation():
     return_url = request.args.get('ret', '/')
     return render_template('formation.html', return_url=return_url)
 
-@app.route('/api/update_last_login', methods=['POST'])
-@check_login
-def update_last_login():
-    """更新用户最后登录时间"""
-    user_id = request.cookies.get('user_id')
-    user = User.query.get(user_id)
-    if user:
-        user.last_login = datetime.now()
-        db.session.commit()
-    return jsonify({'status': 'success'})
-
-@app.route('/api/room_status/<int:room_id>')
-@check_login
-def room_status(room_id):
+def room_status(room: Room):
     """获取房间状态API"""
-    room: Room = Room.query.get_or_404(room_id)
-    
     # 构建玩家信息
     players = []
     for seat_num, player_id, player in room.get_players():
@@ -216,15 +201,73 @@ def room_status(room_id):
                 'username': player.username,
                 'online': player.is_online()
             })
-    
-    return jsonify({
+
+    battle = json.loads(room.battle) if room.battle else None
+    if battle:
+        battle['battle_time'] = math.ceil(datetime.now().timestamp() - battle['battle_time'])
+
+    return {
         'room_id': room.room_id,
         'room_type': room.room_type,
         'status': room.active,
         'players': players,
         'available_seats': room.get_available_seats(),
-        'can_start': room.can_start_game()
-    })
+        'can_start': room.can_start_game(),
+        'battle': battle
+    }
+
+def get_board(user_id, room: Room):
+    """获取棋盘状态API"""
+    user_team = room.get_player_team(user_id)
+    
+    if not room.active:
+        return {}
+
+    record = Record.query.filter_by(room_id=room.room_id).order_by(Record.id.desc()).first()
+    if not record:
+        return {}
+    
+    chess_board = ChessBoard.from_json(record.board_state)
+    has40 = [False] * (room.room_type + 1)
+    for chess in chess_board.chesses:
+        if chess.alive and chess.name == "司":
+            has40[chess.team] = True
+    for chess in chess_board.chesses:
+        # 检查用户是否有权限查看该棋子
+        if chess.team != user_team and (chess.name != '旗' or has40[chess.team]):
+            chess.name = ""
+    
+    return {
+        'record_id': record.id,
+        'board': chess_board.to_dict(),
+    }
+
+@app.route('/api/room_status/<int:room_id>', methods=['GET'])
+@check_login
+def room_status_all(room_id):
+    user_id = request.cookies.get('user_id')
+    user = User.query.get(user_id)
+    if user:
+        user.last_login = datetime.now()
+        db.session.commit()
+
+    room = Room.query.get_or_404(room_id)
+    response = {}
+    response['status'] = room_status(room)
+
+    messages = Message.query.filter_by(room_id=room_id) \
+                            .order_by(Message.timestamp.desc()) \
+                            .limit(50).all()
+    messages.reverse()
+    response['messages'] = [msg.to_dict() for msg in messages]
+
+    emojis = Emoji.query.filter(Emoji.timestamp >= datetime.now() - timedelta(seconds=2)) \
+                        .filter_by(room_id=room_id).all()
+    response['emojis'] = [emoji.to_dict() for emoji in emojis]
+    
+    response['board'] = get_board(user_id, room)
+    
+    return jsonify(response)
 
 @app.route('/api/take_seat/<int:room_id>/<int:seat_num>', methods=['POST'])
 @check_login
@@ -474,58 +517,6 @@ def send_chat_message():
     db.session.commit()
     
     return jsonify({'status': 'success', 'message': message.to_dict()})
-
-@app.route('/api/chat/messages/<int:room_id>')
-@check_login
-def get_chat_messages(room_id):
-    """获取聊天消息"""
-    # 获取最近50条消息
-    messages = Message.query.filter_by(room_id=room_id).order_by(Message.timestamp.desc()).limit(50).all()
-    messages.reverse()  # 反转顺序，使最早的消息在前
-    # 获取最近2秒的表情
-    recent_emojis = Emoji.query.filter_by(room_id=room_id).filter(Emoji.timestamp >= datetime.now() - timedelta(seconds=2)).all()
-    
-    return jsonify({
-        'status': 'success',
-        'messages': [msg.to_dict() for msg in messages],
-        'emojis': [emoji.to_dict() for emoji in recent_emojis]
-    })
-
-@app.route('/api/board/<int:room_id>')
-@check_login
-def get_board(room_id):
-    """获取棋盘状态API"""
-    user_id = request.cookies.get('user_id')
-    room = Room.query.get_or_404(room_id)
-    user_team = room.get_player_team(user_id)
-    
-    if not room.active:
-        return jsonify({'status': 'error', 'message': '游戏尚未开始'})
-    
-    record = Record.query.filter_by(room_id=room_id).order_by(Record.id.desc()).first()
-    if not record:
-        return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
-    
-    chess_board = ChessBoard.from_json(record.board_state)
-    has40 = [False] * (room.room_type + 1)
-    for chess in chess_board.chesses:
-        if chess.alive and chess.name == "司":
-            has40[chess.team] = True
-    for chess in chess_board.chesses:
-        # 检查用户是否有权限查看该棋子
-        if chess.team != user_team and (chess.name != '旗' or has40[chess.team]):
-            chess.name = ""
-    
-    battle = json.loads(room.battle) if room.battle else None
-    if battle:
-        battle['battle_time'] = math.ceil(datetime.now().timestamp() - battle['battle_time'])
-    
-    return jsonify({
-        'record_id': record.id,
-        'status': 'success',
-        'board': chess_board.to_dict(),
-        'battle': battle
-    })
 
 @app.route('/api/set_formation', methods=['POST'])
 @check_login
