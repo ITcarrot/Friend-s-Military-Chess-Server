@@ -216,14 +216,14 @@ def room_status(room: Room):
         'battle': battle
     }
 
-def get_board(user_id, room: Room):
+def get_board(user_id, room: Room, last_record_id):
     """获取棋盘状态API"""
     if not room.active:
-        return {}
+        return None
 
     record = Record.query.filter_by(room_id=room.room_id).order_by(Record.id.desc()).first()
-    if not record:
-        return {}
+    if not record or record.id == last_record_id:
+        return None
     
     user_team = room.get_player_team(user_id)
     chess_board = ChessBoard.from_json(record.board_state)
@@ -270,8 +270,9 @@ def room_status_all(room_id):
                             .filter_by(room_id=room_id).all()
         response['emojis'] = [emoji.to_dict() for emoji in emojis]
 
-    response['board'] = get_board(user_id, room)
-    
+    last_record_id = request.json.get('last_record_id', -1)
+    response['board'] = get_board(user_id, room, last_record_id)
+
     return jsonify(response)
 
 @app.route('/api/take_seat/<int:room_id>/<int:seat_num>', methods=['POST'])

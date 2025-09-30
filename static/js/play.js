@@ -121,135 +121,8 @@ function updateRoomStatus(data) {
     }
 }
 
-let chessMap = {};
-let selectedId = null;
-let selectedForTag = null;
-function updateBoard(board, battle) {
-  const container = $("#boardContainer");
-  const arrowLayer = $("#arrowLayer");
-  let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
-  tags = JSON.parse(tags);
-
-  // 更新棋子
-  board.chesses.forEach(chess => {
-    let el = chessMap[chess.id];
-    if (!el) {
-        // 新建棋子节点 (Bootstrap 风格圆形按钮)
-        el = $(`<div class="btn btn-sm rounded-circle border fw-bold chess"></div>`);
-        el.attr("data-id", chess.id);
-        el.attr("data-team", chess.team);
-        container.append(el);
-        chessMap[chess.id] = el;
-        // 设置不同队伍颜色
-        el.css("background-color", colors[chess.team]);
-      
-        // 点击棋子事件
-        el.on("click", function(e) {
-            e.stopPropagation(); // 阻止冒泡到棋盘
-            const cid = parseInt($(this).attr("data-id"));
-            const chessObj = board.chesses.find(c => c.id === cid);
-
-            if (chessObj.team == userSeat) {
-                if (selectedId === cid) {
-                    // 再点同一颗 -> 取消选中
-                    $(this).removeClass("border-3 border-dark");
-                    selectedId = null;
-                } else {
-                    // 切换选中
-                    if (selectedId !== null) {
-                        chessMap[selectedId].removeClass("border-3 border-dark");
-                    }
-                    $(this).addClass("border-3 border-dark");
-                    selectedId = cid;
-                    $('#selectSound')[0].play();
-                }
-            }else{
-                if (selectedId == null){
-                    selectedForTag = cid;
-                    $('#tagPopup').css({
-                        left: ($(this).position().left + 45) + "px",
-                        top:  ($(this).position().top - 10) + "px"
-                    }).show();
-                } else {
-                    if (chessMap[selectedId].text() == '雷' || chessMap[selectedId].text() == '旗') {
-                        alert('雷和旗不能攻击！');
-                        return;
-                    }
-                    ajaxWithLoading({
-                        url: '/api/attack_chess',
-                        type: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify({
-                            room_id: roomId,
-                            attacker: selectedId,
-                            defender: cid
-                        }),
-                        success: function(response) {
-                            if (response.status !== 'success') {
-                                alert('攻击失败: ' + response.message);
-                            }
-                        }
-                    });
-                    chessMap[selectedId].removeClass("border-3 border-dark");
-                    selectedId = null;
-                }
-            }
-        });
-    }
-    if (chess.name == '')
-        el.text(tags[chess.id] || ''); // 显示标记
-    else
-        el.text(chess.name); // 亮旗会变，因此放外面
-
-    if (chess.alive) {
-        el.show();
-
-        // 平滑移动动画（300ms）
-        el.stop(true).animate({
-            left: chess.x + "px",
-            top:  chess.y + "px"
-        }, 300);
-    } else {
-        el.hide();
-    }
-  });
-
-  // 更新箭头
-  arrowLayer.find("line").remove();
-  if (board.last_move) {
-    drawArrow(board.last_move);
-  }
-  $('#attackPopup').hide();
-  if (battle) {
-    const attacker = battle.attacker;
-    const defender = battle.defender;
-    const atkChess = board.chesses.find(c => c.id === attacker);
-    const defChess = board.chesses.find(c => c.id === defender);
-    if (atkChess && defChess) {
-        let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", atkChess.x + 20); // 棋子中心
-        line.setAttribute("y1", atkChess.y + 20);
-        line.setAttribute("x2", defChess.x + 20);
-        line.setAttribute("y2", defChess.y + 20);
-        line.setAttribute("stroke", "red");
-        line.setAttribute("stroke-width", "2");
-        line.setAttribute("marker-end", "url(#arrowheadR)");
-        arrowLayer.append(line);
-
-        $('#attackPopup').css({
-            left: (defChess.x - 40) + "px",
-            top:  (defChess.y - 60) + "px"
-        });
-        if(battle.battle_time < 5)
-            $('#attackCountdown').text(` ${5 - battle.battle_time}`);
-        else
-            $('#attackCountdown').text(``);
-        if (defChess.team == userSeat || (userSeat !== 0 && battle.battle_time >= 5))
-            $('#attackPopup').show();
-    }
-  }
-}
 function drawArrow(move) {
+    const arrowLayer = $("#arrowLayer");
     const [old_x, old_y, new_x, new_y] = move;
     let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", old_x + 20); // 棋子中心
@@ -263,38 +136,176 @@ function drawArrow(move) {
 }
 
 const chessOrder = ['雷', '司', '军', '师', '旅', '团', '营', '连', '排', '兵'];
-let last_battle_pair = (null, null);
-let last_record_id = null;
-function playSound(battle, record_id, battle_result) {
-    battle_pair = [battle ? battle.attacker : null, battle ? battle.defender : null];
-    if (battle && (battle_pair[0] != last_battle_pair[0] || battle_pair[1] != last_battle_pair[1])) {
-        $('#attackSound')[0].play();
-    }
-    last_battle_pair = battle_pair;
+let chessMap = {};
+let selectedId = null;
+let selectedForTag = null;
+function updateBoard(board) {
+    const container = $("#boardContainer");
+    // 更新棋子
+    board.chesses.forEach(chess => {
+        let el = chessMap[chess.id];
+        if (!el) {
+            // 新建棋子节点 (Bootstrap 风格圆形按钮)
+            el = $(`<div class="btn btn-sm rounded-circle border fw-bold chess"></div>`);
+            el.attr("data-id", chess.id);
+            el.attr("data-team", chess.team);
+            container.append(el);
+            chessMap[chess.id] = el;
+            // 设置不同队伍颜色
+            el.css("background-color", colors[chess.team]);
+        
+            // 点击棋子事件
+            el.on("click", function(e) {
+                e.stopPropagation(); // 阻止冒泡到棋盘
+                const cid = parseInt($(this).attr("data-id"));
+                const chessObj = board.chesses.find(c => c.id === cid);
 
-    if (record_id != last_record_id) {
-        if (battle_result) {
-            $('#' + battle_result[0] + 'Sound')[0].play();
+                if (chessObj.team == userSeat) {
+                    if (selectedId === cid) {
+                        // 再点同一颗 -> 取消选中
+                        $(this).removeClass("border-3 border-dark");
+                        selectedId = null;
+                    } else {
+                        // 切换选中
+                        if (selectedId !== null) {
+                            chessMap[selectedId].removeClass("border-3 border-dark");
+                        }
+                        $(this).addClass("border-3 border-dark");
+                        selectedId = cid;
+                        $('#selectSound')[0].play();
+                    }
+                } else {
+                    if (selectedId == null){
+                        selectedForTag = cid;
+                        $('#tagPopup').css({
+                            left: ($(this).position().left + 45) + "px",
+                            top:  ($(this).position().top - 10) + "px"
+                        }).show();
+                    } else {
+                        if (chessMap[selectedId].text() == '雷' || chessMap[selectedId].text() == '旗') {
+                            alert('雷和旗不能攻击！');
+                            return;
+                        }
+                        ajaxWithLoading({
+                            url: '/api/attack_chess',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                room_id: roomId,
+                                attacker: selectedId,
+                                defender: cid
+                            }),
+                            success: function(response) {
+                                if (response.status !== 'success') {
+                                    alert('攻击失败: ' + response.message);
+                                }
+                            }
+                        });
+                        chessMap[selectedId].removeClass("border-3 border-dark");
+                        selectedId = null;
+                    }
+                }
+            });
+        }
+        el.attr("data-name", chess.name); // 亮旗会变，因此放外面，在updateTags里更新
+        if (chess.alive) {
+            el.show();
+            // 平滑移动动画（300ms）
+            el.stop(true).animate({
+                left: chess.x + "px",
+                top:  chess.y + "px"
+            }, 300);
         } else {
-            $('#moveSound')[0].play();
+            el.hide();
         }
-        if (battle_result && battle_result.length > 1){
-            let winner = chessMap[battle_result[1]].text();
-            let loser = chessMap[battle_result[2]].text();
-            let guessWinner = '!';
-            if (chessOrder.indexOf(loser) > 0) {
-                guessWinner = chessOrder[chessOrder.indexOf(loser) - 1];
-            }
-            if (winner == '' || winner == '!' ||
-                (0 <= chessOrder.indexOf(guessWinner) && chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner))) {
-                let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
-                tags = JSON.parse(tags);
-                tags[battle_result[1]] = guessWinner;
-                localStorage.setItem(`tags_${roomId}`, JSON.stringify(tags));
-            }
+    });
+    // 更新箭头
+    const arrowLayer = $("#arrowLayer");
+    arrowLayer.find("line").each(function(_, e){
+        if (e.getAttribute('stroke') == 'black')
+            e.remove();
+    });
+    if (board.last_move) {
+        drawArrow(board.last_move);
+    }
+
+    const battle_result = board.last_battle_result;
+    if (battle_result) {
+        $('#' + battle_result[0] + 'Sound')[0].play();
+    } else {
+        $('#moveSound')[0].play();
+    }
+
+    if (battle_result && battle_result.length > 1){
+        let winner = chessMap[battle_result[1]].text();
+        let loser = chessMap[battle_result[2]].text();
+        let guessWinner = '!';
+        if (chessOrder.indexOf(loser) > 0) {
+            guessWinner = chessOrder[chessOrder.indexOf(loser) - 1];
         }
-        last_record_id = record_id;
-        drawSector(1);
+        if (winner == '' || winner == '!' ||
+            (0 <= chessOrder.indexOf(guessWinner) && chessOrder.indexOf(guessWinner) < chessOrder.indexOf(winner))) {
+            let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
+            tags = JSON.parse(tags);
+            tags[battle_result[1]] = guessWinner;
+            localStorage.setItem(`tags_${roomId}`, JSON.stringify(tags));
+        }
+    }
+
+    drawSector(1);
+}
+
+function updateTags() {
+    let tags = localStorage.getItem(`tags_${roomId}`) || '{}';
+    tags = JSON.parse(tags);
+    for (let id in chessMap)
+        chessMap[id].text(chessMap[id].attr("data-name") || tags[id] || '');
+}
+
+let last_battle_pair = [null, null];
+function updateBattle(battle) {
+    const arrowLayer = $("#arrowLayer");
+    // 清除旧的攻击箭头
+    arrowLayer.find("line").each(function(_, e){
+        if (e.getAttribute('stroke') == 'red')
+            e.remove();
+    });
+    $('#attackPopup').hide();
+    if (battle) {
+        const attacker = battle.attacker;
+        const defender = battle.defender;
+        const atkChess = chessMap[attacker];
+        const defChess = chessMap[defender];
+        if (atkChess && defChess) {
+            let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", atkChess.position().left + 20); // 棋子中心
+            line.setAttribute("y1", atkChess.position().top + 20);
+            line.setAttribute("x2", defChess.position().left + 20);
+            line.setAttribute("y2", defChess.position().top + 20);
+            line.setAttribute("stroke", "red");
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("marker-end", "url(#arrowheadR)");
+            arrowLayer.append(line);
+
+            $('#attackPopup').css({
+                left: (defChess.position().left - 40) + "px",
+                top:  (defChess.position().top - 60) + "px"
+            });
+            if(battle.battle_time < 5)
+                $('#attackCountdown').text(` ${5 - battle.battle_time}`);
+            else
+                $('#attackCountdown').text(``);
+            if (defChess.attr('data-team') == userSeat || (userSeat !== 0 && battle.battle_time >= 5))
+                $('#attackPopup').show();
+        }
+
+        let battle_pair = [battle.attacker, battle.defender];
+        if (battle && (battle_pair[0] != last_battle_pair[0] || battle_pair[1] != last_battle_pair[1])) {
+            $('#attackSound')[0].play();
+        }
+        last_battle_pair = battle_pair;
+    } else {
+        last_battle_pair = [null, null];
     }
 }
 
@@ -804,6 +815,7 @@ $('#setFormationBtn').click(function() {
 });
 
 // 和服务器交互
+let last_record_id = -1;
 function updateRoomStatusAll() {
     $.ajax({
         url: `/api/room_status/${roomId}`,
@@ -811,15 +823,20 @@ function updateRoomStatusAll() {
         contentType: 'application/json',
         data: JSON.stringify({
             last_msg_id: last_msg_id,
-            last_emoji_id: last_emoji_id
+            last_emoji_id: last_emoji_id,
+            last_record_id: last_record_id
         }),
         success: function(data) {
             updateRoomStatus(data.status);
             updateChatMessages(data.messages);
             updateEmojis(data.emojis);
             if(isActive){
-                updateBoard(data.board.board, data.status.battle);
-                playSound(data.status.battle, data.board.record_id, data.board.board.last_battle_result);
+                if (data.board) {
+                    updateBoard(data.board.board);
+                    last_record_id = data.board.record_id;
+                }
+                updateBattle(data.status.battle);
+                updateTags();
             }else{
                 // 清除棋盘
                 Object.values(chessMap).forEach(el => el.remove());
