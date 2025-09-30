@@ -107,17 +107,18 @@ function updateRoomStatus(data) {
         }
     });
     
-    $('#playersList').html(playersHtml);
-    
+    if (playersHtml != $('#playersList').html()) {
+        $('#playersList').html(playersHtml);
+        // 绑定事件
+        bindEvents();
+    }
+
     // 更新用户座位信息
     if (userSeat > 0) {
         $('#userSeatInfo').html(`您是 <span class="badge" style="background:${colors[userSeat]}">玩家${userSeat}</span> - 您可以点击离座按钮退出座位`);
     } else {
         $('#userSeatInfo').html('您当前是观战状态 - 点击空座位的椅子图标可以加入游戏');
     }
-    
-    // 绑定事件
-    bindEvents();
 }
 
 let chessMap = {};
@@ -828,7 +829,7 @@ function updateRoomStatusAll() {
             }
         },
         complete: function() {
-            setTimeout(updateRoomStatusAll, 500);
+            setTimeout(updateRoomStatusAll, 200);
         }
     });
 }
