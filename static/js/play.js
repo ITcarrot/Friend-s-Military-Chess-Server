@@ -5,7 +5,7 @@ function ajaxWithLoading(options) {
             alert('网络错误，操作失败，请重试');
         })
         .always(function() {
-            $('#loadingOverlay').hide();
+            $('#loadingOverlay').stop().hide();
         });
 }
 
@@ -15,7 +15,7 @@ function postWithLoading(url, data, success) {
     .fail(function() {
         alert('网络错误，操作失败，请重试');
     }).always(function() {
-        $('#loadingOverlay').hide();
+        $('#loadingOverlay').stop().hide();
     });
 }
 
