@@ -817,6 +817,7 @@ $('#setFormationBtn').click(function() {
 // 和服务器交互
 let last_record_id = -1;
 function updateRoomStatusAll() {
+    let pingStart = new Date();
     $.ajax({
         url: `/api/room_status/${roomId}`,
         type: 'POST',
@@ -844,8 +845,16 @@ function updateRoomStatusAll() {
                 selectedId = null;
                 $("#arrowLayer").find("line").remove();
             }
+            let pingEnd = new Date();
+            let ping = parseInt(pingEnd - pingStart);
+            let red = Math.min(Math.max(0, Math.floor((ping - 200) / 3)), 255);
+            $('#ping').text(ping + ' ms');
+            $('#ping').css('color', `rgb(${red}, ${255 - red}, 0)`);
+            setTimeout(updateRoomStatusAll, Math.max(200 - ping, 0));
         },
-        complete: function() {
+        error: function() {
+            $('#ping').text('离线');
+            $('#ping').css('color', 'red');
             setTimeout(updateRoomStatusAll, 200);
         }
     });
