@@ -254,7 +254,7 @@ def room_status_all(room_id):
     response = {}
     response['status'] = room_status(room)
 
-    last_msg_id = request.json.get('last_msg_id')
+    last_msg_id = request.json.get('last_msg_id', -1)
     messages = Message.query.filter(Message.id > last_msg_id) \
                             .filter_by(room_id=room_id) \
                             .order_by(Message.timestamp.desc()) \
@@ -262,7 +262,7 @@ def room_status_all(room_id):
     messages.reverse()
     response['messages'] = [msg.to_dict() for msg in messages]
 
-    last_emoji_id = request.json.get('last_emoji_id')
+    last_emoji_id = request.json.get('last_emoji_id', -1)
     if last_emoji_id == -1:
         response['emojis'] = Emoji.query.order_by(Emoji.id.desc()).first().id
     else:

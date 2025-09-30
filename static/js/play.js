@@ -70,7 +70,7 @@ function updateRoomStatus(data) {
             playersHtml += `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
+                        <span class="badge me-2" style="background:${colors[seat]}">玩家${seat}</span>
                         <span>${player.username}</span>
                         <span class="badge bg-${player.online ? 'success' : 'danger'} ms-2">
                             ${player.online ? '在线' : '离线'}
@@ -94,7 +94,7 @@ function updateRoomStatus(data) {
             playersHtml += `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="badge me-2" style="background:${colors[seat]}">${seat}号位</span>
+                        <span class="badge me-2" style="background:${colors[seat]}">玩家${seat}</span>
                         <span class="text-muted">空座位</span>
                     </div>
                     <div>
@@ -111,7 +111,7 @@ function updateRoomStatus(data) {
     
     // 更新用户座位信息
     if (userSeat > 0) {
-        $('#userSeatInfo').html(`您坐在 <span class="badge" style="background:${colors[userSeat]}">${userSeat}号位</span> - 您可以点击离座按钮退出座位`);
+        $('#userSeatInfo').html(`您是 <span class="badge" style="background:${colors[userSeat]}">玩家${userSeat}</span> - 您可以点击离座按钮退出座位`);
     } else {
         $('#userSeatInfo').html('您当前是观战状态 - 点击空座位的椅子图标可以加入游戏');
     }
