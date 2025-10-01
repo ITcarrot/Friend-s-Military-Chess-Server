@@ -66,6 +66,13 @@ body {
   font-size: 0.75rem;
 }
 
+.btn-xl {
+  --bs-btn-padding-y: 1rem;
+  --bs-btn-padding-x: 2rem;
+  --bs-btn-font-size: 2.5rem;
+  --bs-btn-border-radius: var(--bs-border-radius-xl);
+}
+
 /* 聊天窗口样式 */
 .chatWindow {
   background-color: #f8f9fa;

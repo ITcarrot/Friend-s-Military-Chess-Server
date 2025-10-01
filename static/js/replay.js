@@ -55,6 +55,7 @@ updateReplay(1); // 初始化显示第一步
 
 function startAutoPlay() {
     $('#playPauseBtn').removeClass('fa-play').addClass('fa-pause');
+    $('#playPauseBtn2').removeClass('fa-play').addClass('fa-pause');
     autoPlayInterval = setInterval(() => {
         let rangeInput = $('#replayRange')[0];
         let currentValue = parseInt(rangeInput.value);
@@ -64,11 +65,12 @@ function startAutoPlay() {
         } else {
             stopAutoPlay();
         }
-    }, 1000);
+    }, 1500);
 }
 
 function stopAutoPlay() {
     $('#playPauseBtn').removeClass('fa-pause').addClass('fa-play');
+    $('#playPauseBtn2').removeClass('fa-pause').addClass('fa-play');
     clearInterval(autoPlayInterval);
 }
 
