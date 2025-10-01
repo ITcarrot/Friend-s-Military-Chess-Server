@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
+import online_pool
 
 def db_init(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sqlite.db'
@@ -11,11 +12,10 @@ def db_init(app):
     class User(db.Model):
         user_id = db.Column(db.String(8), primary_key=True)
         username = db.Column(db.String(80), nullable=False)
-        last_login = db.Column(db.DateTime, nullable=False)
         
         def is_online(self):
             """检查用户是否在线（3秒内活跃）"""
-            return datetime.now() - self.last_login < timedelta(seconds=3)
+            return online_pool.is_online(self.user_id)
     
     global Room
     class Room(db.Model):

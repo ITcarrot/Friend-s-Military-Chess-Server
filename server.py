@@ -22,6 +22,8 @@ Compress(app)
 from db_tables import db_init
 db_init(app)
 from db_tables import *
+import online_pool
+online_pool.init_client(app)
 
 # 设置唯一的邀请码
 INVITATION_CODE = "自行设置"
@@ -245,10 +247,7 @@ def get_board(user_id, room: Room, last_record_id):
 @check_login
 def room_status_all(room_id):
     user_id = request.cookies.get('user_id')
-    user = User.query.get(user_id)
-    if user:
-        user.last_login = datetime.now()
-        db.session.commit()
+    online_pool.set_online(user_id)
 
     room = Room.query.get_or_404(room_id)
     response = {}
