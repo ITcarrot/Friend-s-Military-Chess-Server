@@ -53,15 +53,19 @@ function updateRoomStatus(data) {
     
     // 先创建已占用的座位
     let occupiedSeats = {};
-    userSeat = 0; // 重置用户座位
+    let new_userSeat = 0; // 重置用户座位
     data.players.forEach(player => {
         occupiedSeats[player.seat] = player;
         
         // 记录用户座位
         if (player.user_id === userId) {
-            userSeat = player.seat;
+            new_userSeat = player.seat;
         }
     });
+    if (new_userSeat !== userSeat) {
+        userSeat = new_userSeat;
+        last_record_id = -1; // 座位变化，重置记录ID
+    }
     
     // 按座位顺序显示
     allSeats.forEach(seat => {
