@@ -259,7 +259,7 @@ function updateBoard(board, next_player) {
 
     $('.round-indicator').show();
     $('.round-indicator').css('color', colors[next_player]);
-    if (next_player == userSeat) {
+    if (userSeat && next_player == userSeat) {
         clearInterval(roundTickingInterval);
         roundTickingInterval = setInterval(function() {$('#clockSound')[0].play();}, 2000);
         $('.round-indicator').addClass('active');

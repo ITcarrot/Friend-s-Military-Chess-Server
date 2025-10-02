@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, make_response, jsonify, send_from_directory
 from flask_compress import Compress
 from datetime import datetime
-import hashlib, uuid, math, json
+import hashlib, uuid, math, json, random
 from game import *
 
 import logging
@@ -218,6 +218,12 @@ def room_status(room: Room):
         'battle': battle
     }
 
+def get_observed_team(room: Room) -> int:
+    """根据场上玩家生成被观战的队伍"""
+    player_ids = [player_id for seat_num, player_id, player in room.get_players() if player_id]
+    random.seed(sum([int(pid, 16) * (i + 1) for i, pid in enumerate(player_ids)]) + room.room_id)
+    return random.randint(1, room.room_type)
+
 def get_board(user_id, room: Room, last_record_id):
     """获取棋盘状态API"""
     if not room.active:
@@ -228,6 +234,8 @@ def get_board(user_id, room: Room, last_record_id):
         return None
     
     user_team = room.get_player_team(user_id)
+    if user_team == 0:
+        user_team = get_observed_team(room)
     chess_board = ChessBoard.from_json(record.board_state)
     has40 = [False] * (room.room_type + 1)
     flag_direction = []
