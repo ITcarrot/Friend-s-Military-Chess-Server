@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, make_response, jsonify, send_from_directory
 from flask_compress import Compress
 from datetime import datetime
-import hashlib, uuid, re, math, json, pickle
+import hashlib, uuid, math, json
 from game import *
 
 import logging
@@ -230,17 +230,29 @@ def get_board(user_id, room: Room, last_record_id):
     user_team = room.get_player_team(user_id)
     chess_board = ChessBoard.from_json(record.board_state)
     has40 = [False] * (room.room_type + 1)
+    flag_direction = []
     for chess in chess_board.chesses:
         if chess.alive and chess.name == "司":
             has40[chess.team] = True
+        if chess.alive and chess.name == "旗":
+            flag_direction.append((chess.team, math.atan2(500 - chess.y, chess.x - 500)))
     for chess in chess_board.chesses:
         # 检查用户是否有权限查看该棋子
         if chess.team != user_team and (chess.name != '旗' or has40[chess.team]):
             chess.name = ""
     
+    flag_direction.sort(key=lambda x: x[1])
+    next_player = 0
+    if chess_board.last_move:
+        for i, (teams, _) in enumerate(flag_direction):
+            if teams == chess_board.last_move[4]:
+                next_player = flag_direction[(i + 1) % len(flag_direction)][0]
+                break
+    
     return {
         'record_id': record.id,
         'board': chess_board.to_dict(),
+        'next_player': next_player
     }
 
 @app.route('/api/room_status/<int:room_id>', methods=['POST'])
@@ -611,7 +623,7 @@ def move_chess():
         old_x, old_y = chess.x, chess.y
         chess.x = new_x
         chess.y = new_y
-        chess_board.last_move = (old_x, old_y, new_x, new_y)
+        chess_board.last_move = (old_x, old_y, new_x, new_y, chess.team)
         chess_board.last_battle_result = None
         
         # 保存新的棋盘状态
@@ -715,7 +727,7 @@ def respond_attack():
                     if chess.team == defender.team:
                         chess.alive = False
             
-            chess_board.last_move = (attacker.x, attacker.y, defender.x, defender.y)
+            chess_board.last_move = (attacker.x, attacker.y, defender.x, defender.y, attacker.team)
             if result > 0:
                 attacker.x, attacker.y = defender.x, defender.y
             

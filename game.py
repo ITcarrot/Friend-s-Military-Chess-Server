@@ -78,7 +78,7 @@ class ChessBoard:
     def __init__(self, num_players):
         chess_pool = copy.copy(ALL_CHESS)
         self.chesses = []
-        self.last_move = None # (old_x, old_y, new_x, new_y)
+        self.last_move = None # (old_x, old_y, new_x, new_y, chess_team)
         self.last_battle_result = None
         cnt = 0
         for i in range(1, num_players + 1):

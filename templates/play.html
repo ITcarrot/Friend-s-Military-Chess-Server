@@ -10,6 +10,7 @@
 <audio id="winSound" src="/static/audio/win.mp3" preload="auto"></audio>
 <audio id="loseSound" src="/static/audio/lose.mp3" preload="auto"></audio>
 <audio id="drawSound" src="/static/audio/draw.mp3" preload="auto"></audio>
+<audio id="clockSound" src="/static/audio/clock.mp3" preload="auto"></audio>
 
 <div class="d-flex justify-content-between mb-4">
     <a href="/" class="btn btn-secondary" onclick="$('.leave-btn').click();">
@@ -101,11 +102,9 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="text-muted">提示：点击棋盘空白处可发送表情</span>
-                    <span class="text-muted">延迟：<span id="ping">离线</span></span>
                     <span class="text-muted">
-                        行棋提示器校准：
-                        <button id="sectorLeftBtn" class="btn btn-sm btn-primary me-2"><i class="fas fa-rotate-right"></i></button>
-                        <button id="sectorRightBtn" class="btn btn-sm btn-primary"><i class="fas fa-rotate-left"></i></button>
+                        <i class="fa-solid fa-wifi"></i>
+                        <span id="ping" style="display: inline-block; width: 6ch; text-align: right;">离线</span>
                     </span>
                 </div>
                 <div class="text-center mb-4" style="height: 1000px; position: relative;" id="boardContainer">
@@ -158,10 +157,7 @@
                         style="position:absolute; z-index:1000; width:400px; top: 300px; left: 300px;
                             text-align:left; opacity: 0.5; display:none;">
                     </div>
-                    <!-- 行棋提示器 -->
-                    <svg id="sectorSvg" width="200" height="200" style="position:absolute; left:400px; top:400px; z-index:5;">
-                        <path id="sectorPath" fill="rgba(40,167,69,0.2)" stroke="#28a745" stroke-width="2"/>
-                    </svg>
+                    <div class="round-indicator spinner-border"></div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2 mx-4">
                     <a href="/formation?ret={{ request.path }}" class="d-grid text-decoration-none">

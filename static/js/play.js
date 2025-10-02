@@ -143,7 +143,8 @@ const chessOrder = ['雷', '司', '军', '师', '旅', '团', '营', '连', '排
 let chessMap = {};
 let selectedId = null;
 let selectedForTag = null;
-function updateBoard(board) {
+let roundTickingInterval = -1;
+function updateBoard(board, next_player) {
     const container = $("#boardContainer");
     // 更新棋子
     board.chesses.forEach(chess => {
@@ -256,7 +257,18 @@ function updateBoard(board) {
         }
     }
 
-    drawSector(1);
+    $('.round-indicator').show();
+    $('.round-indicator').css('color', colors[next_player]);
+    if (next_player == userSeat) {
+        clearInterval(roundTickingInterval);
+        roundTickingInterval = setInterval(function() {$('#clockSound')[0].play();}, 2000);
+        $('.round-indicator').addClass('active');
+        $('.round-indicator').css('background-color', colors[next_player]);
+    } else {
+        clearInterval(roundTickingInterval);
+        $('.round-indicator').removeClass('active');
+        $('.round-indicator').css('background', 'none');
+    }
 }
 
 function updateTags() {
@@ -688,36 +700,6 @@ $('#clearTagBtn').click(function() {
     localStorage.removeItem(`tags_${roomId}`);
 });
 
-// 行棋提示器
-let sectorStep = 0;
-function drawSector(delta) {
-    sectorStep = (sectorStep + delta) % roomType;
-    const n = roomType;
-    const angle = 360 / n;
-    const startAngle = angle * -sectorStep - angle / 2 - 90;
-    const endAngle = angle * -sectorStep + angle / 2 - 90;
-    const r = 100, cx = 100, cy = 100;
-    const rad = a => a * Math.PI / 180;
-    const x1 = cx + r * Math.cos(rad(startAngle));
-    const y1 = cy + r * Math.sin(rad(startAngle));
-    const x2 = cx + r * Math.cos(rad(endAngle));
-    const y2 = cy + r * Math.sin(rad(endAngle));
-    const largeArc = angle > 180 ? 1 : 0;
-    const d = [
-        `M ${cx} ${cy}`,
-        `L ${x1} ${y1}`,
-        `A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`,
-        'Z'
-    ].join(' ');
-    $('#sectorPath').attr('d', d);
-}
-$('#sectorLeftBtn').click(function() {
-    drawSector(-1);
-});
-$('#sectorRightBtn').click(function() {
-    drawSector(1);
-});
-
 let formationPos = 0;
 let previewChess = [];
 function renderFormationPreview()
@@ -837,7 +819,7 @@ function updateRoomStatusAll() {
             updateEmojis(data.emojis);
             if(isActive){
                 if (data.board) {
-                    updateBoard(data.board.board);
+                    updateBoard(data.board.board, data.board.next_player);
                     last_record_id = data.board.record_id;
                 }
                 updateBattle(data.status.battle);
@@ -848,6 +830,8 @@ function updateRoomStatusAll() {
                 chessMap = {};
                 selectedId = null;
                 $("#arrowLayer").find("line").remove();
+                $('.round-indicator').hide();
+                clearInterval(roundTickingInterval);
             }
             let pingEnd = new Date();
             let ping = parseInt(pingEnd - pingStart);
