@@ -493,9 +493,14 @@ function bindEvents() {
     $('.leave-btn').click(function() {
         const seat = $(this).data('seat');
         if(!isActive || confirm('当前游戏正在进行中，离座将会退出游戏。确定要离座吗？')){
-            postWithLoading(`/api/leave_seat/${roomId}/${seat}`, {}, function(response) {
-                if (response.status !== 'success') {
-                    alert(response.message);
+            ajaxWithLoading({
+                url: `/api/leave_seat/${roomId}/${seat}`,
+                type: 'POST',
+                async: false,
+                success: function(response) {
+                    if (response.status !== 'success') {
+                        alert(response.message);
+                    }
                 }
             });
         }
