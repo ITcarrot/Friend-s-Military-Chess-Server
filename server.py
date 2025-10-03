@@ -118,7 +118,7 @@ def register():
         response.set_cookie('user_id', user_id, max_age=365*24*60*60)  # 30天有效期
         response.set_cookie('token', token, max_age=365*24*60*60)
         
-        new_user = User(user_id=user_id, username=username, last_login=datetime.now())
+        new_user = User(user_id=user_id, username=username)
         db.session.add(new_user)
         db.session.commit()
         
