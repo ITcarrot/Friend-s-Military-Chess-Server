@@ -1,4 +1,5 @@
 import json, random, copy
+import zstandard as zstd
 
 ALL_CHESS = [
   '司',    # 司令 x1
@@ -98,12 +99,15 @@ class ChessBoard:
             'last_battle_result': self.last_battle_result
         }
 
-    def jsonify(self):
-        return json.dumps(self.to_dict())
-    
+    def compress(self):
+        data = json.dumps(self.to_dict()).encode('utf-8')
+        cctx = zstd.ZstdCompressor()
+        return cctx.compress(data)
+
     @classmethod
-    def from_json(cls, json_str):
-        data = json.loads(json_str)
+    def from_compress(cls, compressed_data):
+        cctx = zstd.ZstdDecompressor()
+        data = json.loads(cctx.decompress(compressed_data).decode('utf-8'))
         board = cls(0)
         board.chesses = [Chess.from_dict(chess_data) for chess_data in data['chesses']]
         board.last_move = data['last_move']

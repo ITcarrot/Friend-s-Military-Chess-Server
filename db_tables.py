@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta, timezone
+import zstandard as zstd
 import online_pool
 
 def db_init(app):
@@ -125,8 +126,12 @@ def db_init(app):
     class Record(db.Model):
         id = db.Column(db.Integer, primary_key=True, autoincrement=True)
         room_id = db.Column(db.Integer, nullable=False)
-        board_state = db.Column(db.Text, nullable=False)
-    
+        board_state = db.Column(db.LargeBinary, nullable=False)
+        
+        def decompress(self):
+            dctx = zstd.ZstdDecompressor()
+            return dctx.decompress(self.board_state).decode('utf-8')
+
     global Replay
     class Replay(db.Model):
         id = db.Column(db.Integer, primary_key=True, autoincrement=True)

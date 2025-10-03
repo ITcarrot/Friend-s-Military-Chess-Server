@@ -182,7 +182,7 @@ def replay_view(replay_id):
                 .filter(Record.id.between(replay.start_id, replay.end_id)) \
                 .order_by(Record.id).all()
     return render_template('replay.html', room_type=len(players), \
-        players=enumerate(players), records=[r.board_state for r in records], colors=COLORS)
+        players=enumerate(players), records=[r.decompress() for r in records], colors=COLORS)
 
 @app.route('/formation')
 @check_login
@@ -236,7 +236,7 @@ def get_board(user_id, room: Room, last_record_id):
     user_team = room.get_player_team(user_id)
     if user_team == 0:
         user_team = get_observed_team(room)
-    chess_board = ChessBoard.from_json(record.board_state)
+    chess_board = ChessBoard.from_compress(record.board_state)
     has40 = [False] * (room.room_type + 1)
     flag_direction = []
     for chess in chess_board.chesses:
@@ -437,7 +437,7 @@ def start_game(room_id):
         room.active = True
         room.battle = None
         chess_board = ChessBoard(room.room_type)
-        record = Record(room_id=room.room_id, board_state=chess_board.jsonify())
+        record = Record(room_id=room.room_id, board_state=chess_board.compress())
         db.session.add(record)
         
     replay = Replay(
@@ -569,7 +569,7 @@ def set_formation():
         if not record:
             return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
         
-        chess_board = ChessBoard.from_json(record.board_state)
+        chess_board = ChessBoard.from_compress(record.board_state)
         
         # 获取该队伍的棋子
         chess_by_name = {}
@@ -587,7 +587,7 @@ def set_formation():
         
         chess_board.last_move = None
         chess_board.last_battle_result = None
-        record = Record(room_id=room.room_id, board_state=chess_board.jsonify())
+        record = Record(room_id=room.room_id, board_state=chess_board.compress())
         db.session.add(record)
     
     return jsonify({'status': 'success'})
@@ -615,7 +615,7 @@ def move_chess():
         if not record:
             return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
         
-        chess_board = ChessBoard.from_json(record.board_state)
+        chess_board = ChessBoard.from_compress(record.board_state)
         
         # 查找要移动的棋子
         chess = next((c for c in chess_board.chesses if c.id == chess_id), None)
@@ -635,7 +635,7 @@ def move_chess():
         chess_board.last_battle_result = None
         
         # 保存新的棋盘状态
-        new_record = Record(room_id=room_id, board_state=chess_board.jsonify())
+        new_record = Record(room_id=room_id, board_state=chess_board.compress())
         db.session.add(new_record)
     
     return jsonify({'status': 'success'})
@@ -703,7 +703,7 @@ def respond_attack():
         if not record:
             return jsonify({'status': 'error', 'message': '棋盘数据不存在'})
         
-        chess_board = ChessBoard.from_json(record.board_state)
+        chess_board = ChessBoard.from_compress(record.board_state)
         
         attacker = next((c for c in chess_board.chesses if c.id == battle['attacker']), None)
         defender = next((c for c in chess_board.chesses if c.id == battle['defender']), None)
@@ -739,7 +739,7 @@ def respond_attack():
             if result > 0:
                 attacker.x, attacker.y = defender.x, defender.y
             
-            new_record = Record(room_id=room_id, board_state=chess_board.jsonify())
+            new_record = Record(room_id=room_id, board_state=chess_board.compress())
             db.session.add(new_record)
         
         room.battle = None
