@@ -144,6 +144,7 @@ let chessMap = {};
 let selectedId = null;
 let selectedForTag = null;
 let roundTickingInterval = -1;
+let allowedToMove = false;
 function updateBoard(board, next_player) {
     const container = $("#boardContainer");
     // 更新棋子
@@ -191,21 +192,23 @@ function updateBoard(board, next_player) {
                             alert('雷和旗不能攻击！');
                             return;
                         }
-                        ajaxWithLoading({
-                            url: '/api/attack_chess',
-                            type: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                room_id: roomId,
-                                attacker: selectedId,
-                                defender: cid
-                            }),
-                            success: function(response) {
-                                if (response.status !== 'success') {
-                                    alert('攻击失败: ' + response.message);
+                        if (allowedToMove || confirm('当前不是您的回合，确定要攻击吗？')) {
+                            ajaxWithLoading({
+                                url: '/api/attack_chess',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    room_id: roomId,
+                                    attacker: selectedId,
+                                    defender: cid
+                                }),
+                                success: function(response) {
+                                    if (response.status !== 'success') {
+                                        alert('攻击失败: ' + response.message);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                         chessMap[selectedId].removeClass("border-3 border-dark");
                         selectedId = null;
                     }
@@ -269,6 +272,8 @@ function updateBoard(board, next_player) {
         $('.round-indicator').removeClass('active');
         $('.round-indicator').css('background', 'none');
     }
+    allowedToMove = next_player == 0 || next_player == userSeat
+                    || (board.last_move && board.last_move[4] == userSeat);
 }
 
 function updateTags() {
@@ -616,24 +621,26 @@ $("#boardContainer").on("click", function(e) {
         }
 
     const [old_x, old_y] = [chessMap[selectedId].position().left, chessMap[selectedId].position().top];
-    ajaxWithLoading({
-        url: '/api/move_chess',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            room_id: roomId,
-            chess_id: selectedId,
-            new_x: x,
-            new_y: y
-        }),
-        success: function(response) {
-            if (response.status !== 'success') {
-                alert('移动失败: ' + response.message);
-            } else {
-                drawArrow([old_x, old_y, x, y]); // 确认移动后画一次箭头
+    if (allowedToMove || confirm('当前不是您的回合，确定要移动吗？')) {
+        ajaxWithLoading({
+            url: '/api/move_chess',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                room_id: roomId,
+                chess_id: selectedId,
+                new_x: x,
+                new_y: y
+            }),
+            success: function(response) {
+                if (response.status !== 'success') {
+                    alert('移动失败: ' + response.message);
+                } else {
+                    drawArrow([old_x, old_y, x, y]); // 确认移动后画一次箭头
+                }
             }
-        }
-    });
+        });
+    }
 
     // 移动后取消选中
     chessMap[selectedId].removeClass("border-3 border-dark");
