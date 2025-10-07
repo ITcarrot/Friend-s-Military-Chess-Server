@@ -856,7 +856,7 @@ function updateRoomStatusAll() {
             setTimeout(updateRoomStatusAll, Math.max(200 - ping, 0));
         },
         error: function() {
-            updateTimeout = 0;
+            updateTimeout = updateTimeout * 2;
             $('#ping').text('离线');
             $('#ping').css('color', 'red');
             setTimeout(updateRoomStatusAll, 200);
