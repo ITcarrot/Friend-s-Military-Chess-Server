@@ -7,6 +7,7 @@ if __name__ == "__main__":
     config.application_path = "server:app"
     config.bind = ["0.0.0.0:42000"] 
     config.workers = 31
+    config.keep_alive_timeout = 1
     config.max_requests = 10 ** 6
     config.keyfile = "ssl/key.pem"
     config.certfile = "ssl/cert.pem"
